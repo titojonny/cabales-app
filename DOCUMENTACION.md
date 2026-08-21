@@ -1,0 +1,52 @@
+- `.env.example`: documenta el prefijo API y el nombre exacto de la cookie CSRF pública.
+- `.gitignore`: documenta por secciones dependencias, resultados, entorno local y archivos de herramientas excluidos.
+- `.prettierignore`: documenta qué salidas, binarios y archivos generados no procesa Prettier.
+- `.prettierrc.json`: JSON no admite comentarios; esta línea registra la política de formato centralizada.
+- `DOCUMENTACION.md`: mantiene exactamente una entrada descriptiva por archivo fuente, configuración, documento o asset mantenido.
+- `README.md`: documenta producto, arquitectura, instalación, rutas, scripts, PWA, accesibilidad, seguridad, API y límites.
+- `e2e/smoke.spec.ts`: los escenarios documentan navegación pública móvil, validación y retorno seguro a invitaciones.
+- `eslint.config.js`: su JSDoc documenta el alcance de reglas TypeScript y React; los ignores son declarativos.
+- `index.html`: metadatos, idioma, descripción y fallback sin JavaScript documentan el shell HTML semántico.
+- `package-lock.json`: JSON generado no admite comentarios; fija el árbol exacto instalado y auditado por npm.
+- `package.json`: JSON no admite comentarios; nombres de scripts y agrupación de dependencias describen sus responsabilidades.
+- `playwright.config.ts`: su TSDoc documenta servidor, dispositivo móvil y política de ejecución E2E.
+- `postcss.config.js`: su JSDoc documenta Tailwind y Autoprefixer como etapas del pipeline CSS.
+- `public/icon-192.png`: PNG binario sin comentarios; icono instalable de 192 px reproducible con el generador local.
+- `public/icon-512.png`: PNG binario sin comentarios; icono instalable y maskable de 512 px reproducible localmente.
+- `public/icon.svg`: título accesible, gradiente y geometría vectorial documentan la identidad visual escalable.
+- `scripts/generate-icons.mjs`: JSDoc y comentarios explican CRC, bloques PNG y fórmulas proporcionales de la silueta.
+- `src/api/cabales-api.ts`: TSDoc documenta el adaptador único y contratos de endpoint; nombres describen cada operación.
+- `src/api/cabales-api.test.ts`: los casos verifican rutas anidadas, bodies reales y claves idempotentes recibidas por intento.
+- `src/api/contracts.ts`: TSDoc describe contratos, RBAC derivado, ítems, historial y estados financieros completos.
+- `src/api/http.test.ts`: nombres de suite y caso documentan la verificación de cookies, CSRF e idempotencia.
+- `src/api/http.ts`: TSDoc cubre error, opciones, suscripción 401, limpieza CSRF y ejecución segura de solicitudes.
+- `src/api/queries.ts`: TSDoc documenta claves estables y la política compartida de consultas remotas.
+- `src/api/schemas.ts`: TSDoc documenta validación raw, transformaciones, invitaciones, estados Prisma e ítems/historial.
+- `src/api/schemas.test.ts`: los fixtures Prisma documentan y verifican transformaciones estrictas de lista y detalle.
+- `src/api/telemetry.ts`: TSDoc delimita eventos permitidos y registro estructurado sin información sensible.
+- `src/App.tsx`: TSDoc documenta el mapa único de rutas públicas, protegidas, funcionales y pendientes.
+- `src/auth/AuthProvider.tsx`: TSDoc documenta sincronización de sesión por cookie y precondición del hook de consumo.
+- `src/components/AppShell.tsx`: TSDoc documenta la responsabilidad del layout y la navegación adaptativa.
+- `src/components/NetworkStatus.tsx`: TSDoc aclara los avisos de conectividad/actualización y la ausencia de escrituras offline.
+- `src/components/ProtectedRoute.tsx`: TSDoc documenta la política fail-secure previa al acceso privado.
+- `src/components/ui.test.tsx`: el caso describe la semántica accesible y la acción verificadas en estados de interfaz.
+- `src/components/ui.tsx`: TSDoc documenta iconos decorativos, paneles de estado y mensajes de error controlados.
+- `src/domain/money.test.ts`: los casos verifican reparto, precisión decimal y el límite entero de 2_147_483_647 centavos.
+- `src/domain/money.ts`: TSDoc explica conversión sin truncamiento, límite Int, formato, reparto y suma.
+- `src/domain/participants.ts`: TSDoc explica resolución de identidades desde el evento y fallbacks honestos por ID.
+- `src/domain/validation.test.ts`: los casos documentan normalización Unicode y rechazo de monedas no permitidas.
+- `src/domain/validation.ts`: TSDoc individual documenta esquemas y aliases de auth, invitaciones, eventos y dinero.
+- `src/main.tsx`: el comentario documenta retry global y la excepción financiera idempotente definida por flujo.
+- `src/pages/AuthPages.tsx`: TSDoc documenta landing, formularios normalizados y composición compartida de autenticación.
+- `src/pages/EventDetailPage.tsx`: TSDoc documenta la vista alcanzable de padrón, enlaces y gastos del evento.
+- `src/pages/ExpensePages.tsx`: TSDoc documenta divisor con conservación de suma y detalle fiel al servidor.
+- `src/pages/GroupPages.tsx`: TSDoc documenta responsabilidades de dashboard, altas, pestañas y encabezado de páginas.
+- `src/pages/InvitationPage.tsx`: TSDoc documenta creación manual RBAC y aceptación protegida por token.
+- `src/pages/PlaceholderPage.tsx`: TSDoc deja explícito que los módulos pendientes no inventan disponibilidad ni datos.
+- `src/pages/SettlementPage.tsx`: TSDoc documenta consulta, generación idempotente y transición visible de transferencias.
+- `src/styles.css`: comentarios por secciones explican tokens, órbita visual, shell, formularios, divisor y preferencias reducidas.
+- `src/test/setup.ts`: imports y configuración determinista describen el entorno común de Testing Library y crypto.
+- `src/vite-env.d.ts`: referencias y declaraciones tipadas documentan APIs PWA y las dos variables Vite admitidas.
+- `tailwind.config.ts`: TSDoc documenta el alcance de escaneo; tokens enlazan utilidades con variables CSS.
+- `tsconfig.json`: JSON no admite comentarios; opciones estrictas y lista de inclusión declaran el alcance del compilador.
+- `vite.config.ts`: TSDoc y configuración documentan app shell, manifest, assets y política `NetworkOnly` para API.

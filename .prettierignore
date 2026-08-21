@@ -1,0 +1,12 @@
+# Salidas generadas y dependencias externas.
+dist
+coverage
+node_modules
+playwright-report
+test-results
+public/icon-192.png
+public/icon-512.png
+package-lock.json
+
+# El registro exige físicamente una sola línea por archivo.
+DOCUMENTACION.md
