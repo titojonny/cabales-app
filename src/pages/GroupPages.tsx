@@ -92,7 +92,16 @@ export function CreateGroupPage() {
   return (
     <PageHeader eyebrow="Nuevo espacio" title="Crear grupo">
       <section className="form-card glass-panel">
-        <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} noValidate>
+        <form
+          onSubmit={form.handleSubmit((values) =>
+            mutation.mutate({
+              name: values.name,
+              currency: values.currency,
+              ...(values.description ? { description: values.description } : {}),
+            }),
+          )}
+          noValidate
+        >
           <label htmlFor="group-name">Nombre</label>
           <input id="group-name" aria-describedby="group-name-error" {...form.register('name')} />
           <FieldError id="group-name-error" message={form.formState.errors.name?.message} />
@@ -304,8 +313,12 @@ export function CreateEventPage() {
   const mutation = useMutation({
     mutationFn: (values: EventValues) =>
       cabalesApi.createEvent(groupId, {
-        ...values,
+        name: values.name,
+        ...(values.description ? { description: values.description } : {}),
         startsAt: new Date(values.startsAt).toISOString(),
+        memberIds: values.memberIds,
+        guests: values.guests,
+        links: values.links,
       }),
     onSuccess: (event) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.events(groupId) });

@@ -1,6 +1,6 @@
 # Cabales
 
-PWA Mobile First para organizar grupos, registrar eventos, dividir gastos y cerrar liquidaciones. Este repositorio contiene el cliente web React y consume el contrato HTTP implementado por Cabales API `/api/v1` sin importar código del servidor.
+PWA Mobile First para organizar grupos, registrar eventos, dividir gastos y cerrar liquidaciones. Este repositorio contiene el cliente web React (Tailwind CSS y TypeScript) y consume el contrato HTTP de Cabales API `/api/v1` (Express + PostgreSQL) sin importar código del servidor.
 
 ## Estado del MVP
 
@@ -49,7 +49,7 @@ VITE_API_URL=http://localhost:3000/api/v1
 VITE_CSRF_COOKIE_NAME=cabales_session_csrf
 ```
 
-`VITE_API_URL` debe apuntar al prefijo versionado, sin secretos. Si se omite, el cliente usa `/api/v1` en el mismo origen. `VITE_CSRF_COOKIE_NAME` debe coincidir con `${COOKIE_NAME}_csrf` de la API y usa `cabales_session_csrf` por defecto. La cookie CSRF no es `HttpOnly`, pero debe pertenecer a un host que el cliente pueda leer; en producción se recomienda servir la API en el mismo host mediante proxy. Para CORS, la API debe permitir el origen exacto, credenciales y cookies apropiadas.
+`VITE_API_URL` debe apuntar al prefijo versionado, sin secretos. Si se omite, el cliente usa `/api/v1` en el mismo origen y Vite lo proxifica a `http://127.0.0.1:3000`. En Windows conviene `127.0.0.1` en lugar de `localhost` para no mezclar IPv4/IPv6. `VITE_CSRF_COOKIE_NAME` debe coincidir con `${COOKIE_NAME}_csrf` de la API y usa `cabales_session_csrf` por defecto. La cookie CSRF no es `HttpOnly`, pero debe pertenecer a un host que el cliente pueda leer; en producción se recomienda servir la API en el mismo host mediante proxy. Para CORS, la API debe permitir el origen exacto (`http://localhost:5173` y `http://127.0.0.1:5173`), credenciales y cookies apropiadas.
 
 ## Scripts
 

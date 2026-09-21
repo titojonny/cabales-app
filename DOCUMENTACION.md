@@ -1,4 +1,4 @@
-- `.env.example`: documenta el prefijo API y el nombre exacto de la cookie CSRF pública.
+- `.env.example`: documenta el prefijo API, el proxy local y el nombre exacto de la cookie CSRF pública.
 - `.gitignore`: documenta por secciones dependencias, resultados, entorno local y archivos de herramientas excluidos.
 - `.prettierignore`: documenta qué salidas, binarios y archivos generados no procesa Prettier.
 - `.prettierrc.json`: JSON no admite comentarios; esta línea registra la política de formato centralizada.
@@ -49,4 +49,4 @@
 - `src/vite-env.d.ts`: referencias y declaraciones tipadas documentan APIs PWA y las dos variables Vite admitidas.
 - `tailwind.config.ts`: TSDoc documenta el alcance de escaneo; tokens enlazan utilidades con variables CSS.
 - `tsconfig.json`: JSON no admite comentarios; opciones estrictas y lista de inclusión declaran el alcance del compilador.
-- `vite.config.ts`: TSDoc y configuración documentan app shell, manifest, assets y política `NetworkOnly` para API.
+- `vite.config.ts`: TSDoc y configuración documentan app shell, proxy local a Express, manifest, assets y política `NetworkOnly` para API.

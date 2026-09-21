@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-/** Construye el shell instalable y fuerza red directa para todo dato de API. */
+/** Construye el shell instalable, proxy local hacia Express y red directa para todo dato de API. */
 export default defineConfig({
   plugins: [
     react(),
@@ -45,6 +45,13 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false },
+      '/health': { target: 'http://127.0.0.1:3000', changeOrigin: false },
+      '/ready': { target: 'http://127.0.0.1:3000', changeOrigin: false },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
