@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Button } from '@heroui/react';
 import { registerSW } from 'virtual:pwa-register';
 
 /** Informa conectividad y actualizaciones sin prometer escrituras offline. */
@@ -33,9 +34,13 @@ export function NetworkStatus() {
       {updateAvailable && (
         <aside className="network-banner update-banner">
           <span>Hay una versión nueva de Cabales.</span>
-          <button type="button" onClick={() => void updateServiceWorker?.(true)}>
+          <Button
+            variant="secondary"
+            type="button"
+            onPress={() => void updateServiceWorker?.(true)}
+          >
             Actualizar
-          </button>
+          </Button>
         </aside>
       )}
     </div>

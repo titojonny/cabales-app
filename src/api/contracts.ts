@@ -25,7 +25,7 @@ export interface GroupMember {
   id: string;
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
   joinedAt?: string;
-  user?: User;
+  user?: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
 }
 
 /** Grupo estable para tarjetas, creación y detalle. */

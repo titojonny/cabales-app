@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Button } from '@heroui/react';
 import { useAuth } from '../auth/AuthProvider';
 import { StatusPanel } from './ui';
 
@@ -23,9 +24,9 @@ export function ProtectedRoute() {
         <StatusPanel
           title={navigator.onLine ? 'No pudimos verificar tu sesión' : 'Estás sin conexión'}
           action={
-            <button className="button primary" type="button" onClick={auth.retry}>
+            <Button variant="primary" type="button" onPress={auth.retry}>
               Reintentar
-            </button>
+            </Button>
           }
         >
           <p>

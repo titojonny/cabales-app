@@ -1,6 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@heroui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
+import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import { queryKeys } from '../api/queries';
@@ -72,6 +75,10 @@ export function LandingPage() {
         <span>Montos precisos</span>
         <span>Sesión segura por cookie</span>
       </section>
+      <footer className="public-footer">
+        <Link to="/privacy">Privacidad</Link>
+        <Link to="/terms">Términos de uso</Link>
+      </footer>
     </main>
   );
 }
@@ -121,18 +128,20 @@ export function LoginPage() {
         />
         <FieldError id="email-error" message={form.formState.errors.email?.message} />
         <label htmlFor="password">Contraseña</label>
-        <input
+        <PasswordField
           id="password"
-          type="password"
           autoComplete="current-password"
-          aria-describedby="password-error"
-          {...form.register('password')}
+          ariaDescribedBy="password-error"
+          registration={form.register('password')}
         />
         <FieldError id="password-error" message={form.formState.errors.password?.message} />
+        <Link className="auth-forgot" to="/forgot-password">
+          ¿Olvidaste tu contraseña?
+        </Link>
         {mutation.isError && <ErrorMessage error={mutation.error} />}
-        <button className="button primary full" type="submit" disabled={mutation.isPending}>
+        <Button variant="primary" fullWidth type="submit" isDisabled={mutation.isPending}>
           {mutation.isPending ? 'Ingresando…' : 'Iniciar sesión'}
-        </button>
+        </Button>
       </form>
     </AuthFrame>
   );
@@ -144,6 +153,7 @@ export function RegisterPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { displayName: '', email: '', password: '' },
@@ -191,20 +201,119 @@ export function RegisterPage() {
         />
         <FieldError id="email-error" message={form.formState.errors.email?.message} />
         <label htmlFor="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          aria-describedby="password-error password-help"
-          {...form.register('password')}
-        />
-        <small id="password-help">Entre 12 y 128 caracteres.</small>
+        <div className="password-field">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            aria-describedby="password-error password-help"
+            {...form.register('password')}
+          />
+          <Button
+            className="password-toggle"
+            variant="tertiary"
+            isIconOnly
+            type="button"
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            onPress={() => setShowPassword((visible) => !visible)}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </Button>
+        </div>
+        <div className="password-help" id="password-help">
+          <small>Usa al menos 12 caracteres.</small>
+          <span className={form.watch('password').length >= 12 ? 'valid' : ''}>
+            {form.watch('password').length >= 12 ? 'Lista' : 'Faltan caracteres'}
+          </span>
+        </div>
         <FieldError id="password-error" message={form.formState.errors.password?.message} />
         {mutation.isError && <ErrorMessage error={mutation.error} />}
-        <button className="button primary full" type="submit" disabled={mutation.isPending}>
+        <Button variant="primary" fullWidth type="submit" isDisabled={mutation.isPending}>
           {mutation.isPending ? 'Creando…' : 'Crear cuenta'}
-        </button>
+        </Button>
       </form>
+    </AuthFrame>
+  );
+}
+
+/** Pantalla de recuperación preparada para el endpoint de correo del backend. */
+export function ForgotPasswordPage() {
+  const token = window.location.hash.startsWith('#token=')
+    ? window.location.hash.slice('#token='.length)
+    : '';
+  const [sent, setSent] = useState(false);
+  const request = useForm<{ email: string }>({ defaultValues: { email: '' } });
+  const reset = useForm<{ password: string }>({ defaultValues: { password: '' } });
+  const requestMutation = useMutation({
+    mutationFn: (values: { email: string }) => cabalesApi.requestPasswordRecovery(values.email),
+    onSuccess: () => setSent(true),
+  });
+  const resetMutation = useMutation({
+    mutationFn: (values: { password: string }) => cabalesApi.resetPassword(token, values.password),
+    onSuccess: () => setSent(true),
+  });
+  return (
+    <AuthFrame
+      eyebrow="Recuperar acceso"
+      title="Volvamos a encontrarnos"
+      alternate={
+        <span>
+          ¿Recordaste tu contraseña? <Link to="/login">Inicia sesión</Link>
+        </span>
+      }
+    >
+      <div className="recovery-placeholder">
+        <div className="recovery-icon" aria-hidden="true">
+          <ShieldCheck size={24} />
+        </div>
+        <h2>Recuperación por correo</h2>
+        {sent ? (
+          <>
+            <p>Si la cuenta existe, recibirás instrucciones en tu correo. Revisa también spam.</p>
+            <Link className="button primary full-width" to="/login">
+              Volver al acceso
+            </Link>
+          </>
+        ) : token ? (
+          <form onSubmit={reset.handleSubmit((values) => resetMutation.mutate(values))} noValidate>
+            <label htmlFor="new-password">Nueva contraseña</label>
+            <input
+              id="new-password"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              {...reset.register('password', { required: true, minLength: 12 })}
+            />
+            {resetMutation.isError && <ErrorMessage error={resetMutation.error} />}
+            <Button variant="primary" fullWidth type="submit" isDisabled={resetMutation.isPending}>
+              {resetMutation.isPending ? 'Guardando…' : 'Cambiar contraseña'}
+            </Button>
+          </form>
+        ) : (
+          <form
+            onSubmit={request.handleSubmit((values) => requestMutation.mutate(values))}
+            noValidate
+          >
+            <p>Te enviaremos un enlace seguro si el correo está registrado.</p>
+            <label htmlFor="recovery-email">Correo</label>
+            <input
+              id="recovery-email"
+              type="email"
+              autoComplete="email"
+              {...request.register('email', { required: true })}
+            />
+            {requestMutation.isError && <ErrorMessage error={requestMutation.error} />}
+            <Button
+              variant="primary"
+              fullWidth
+              type="submit"
+              isDisabled={requestMutation.isPending}
+            >
+              {requestMutation.isPending ? 'Enviando…' : 'Enviar enlace'}
+            </Button>
+          </form>
+        )}
+      </div>
     </AuthFrame>
   );
 }
@@ -235,9 +344,47 @@ function AuthFrame({
         <p className="auth-alternate">{alternate}</p>
       </section>
       <aside className="auth-aside">
+        <div className="auth-aside-kicker">
+          <ShieldCheck size={18} /> Sesión protegida
+        </div>
         <p>“Cerrar una cuenta no debería cerrar el plan.”</p>
         <span>Diseñado para coordinar, no para complicar.</span>
       </aside>
     </main>
+  );
+}
+
+function PasswordField({
+  id,
+  autoComplete,
+  ariaDescribedBy,
+  registration,
+}: {
+  id: string;
+  autoComplete: string;
+  ariaDescribedBy: string;
+  registration: UseFormRegisterReturn;
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <div className="password-field">
+      <input
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        aria-describedby={ariaDescribedBy}
+        {...registration}
+      />
+      <Button
+        className="password-toggle"
+        variant="tertiary"
+        isIconOnly
+        type="button"
+        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        onPress={() => setShowPassword((visible) => !visible)}
+      >
+        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+      </Button>
+    </div>
   );
 }

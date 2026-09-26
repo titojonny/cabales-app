@@ -54,6 +54,26 @@ export const cabalesApi = {
       schema: sessionSchema,
     }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  requestEmailVerification: (email: string) =>
+    request<{ accepted: boolean }>('/auth/email-verification/request', {
+      method: 'POST',
+      body: { email },
+    }),
+  verifyEmail: (token: string) =>
+    request<{ user: { id: string; email: string; displayName: string; avatarUrl: string | null } }>(
+      '/auth/email-verification/confirm',
+      { method: 'POST', body: { token } },
+    ),
+  requestPasswordRecovery: (email: string) =>
+    request<{ accepted: boolean }>('/auth/password-recovery/request', {
+      method: 'POST',
+      body: { email },
+    }),
+  resetPassword: (token: string, password: string) =>
+    request<{ reset: boolean }>('/auth/password-recovery/confirm', {
+      method: 'POST',
+      body: { token, password },
+    }),
   groups: () => request<Group[]>('/groups', { schema: groupListSchema }),
   group: async (groupId: string, currentUserId: string) => {
     const group = await request<Group>(`/groups/${encodeURIComponent(groupId)}`, {

@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@heroui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -33,9 +34,9 @@ export function DashboardPage() {
         <StatusPanel
           title="No pudimos cargar los grupos"
           action={
-            <button className="button quiet" type="button" onClick={() => void groups.refetch()}>
+            <Button variant="tertiary" type="button" onPress={() => void groups.refetch()}>
               Reintentar
-            </button>
+            </Button>
           }
         >
           <ErrorMessage error={groups.error} />
@@ -126,9 +127,9 @@ export function CreateGroupPage() {
           </select>
           {mutation.isError && <ErrorMessage error={mutation.error} />}
           <div className="button-row">
-            <button className="button primary" type="submit" disabled={mutation.isPending}>
+            <Button variant="primary" type="submit" isDisabled={mutation.isPending}>
               {mutation.isPending ? 'Creando…' : 'Crear grupo'}
-            </button>
+            </Button>
             <Link className="button quiet" to="/app/groups">
               Cancelar
             </Link>
@@ -215,7 +216,7 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
                       </span>
                       <span>
                         <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
-                        <small>{member.user?.email || member.role}</small>
+                        <small>{member.role}</small>
                       </span>
                     </li>
                   ))}
@@ -406,17 +407,18 @@ export function CreateEventPage() {
                 maxLength={120}
                 onChange={(change) => setGuestDraft(change.target.value)}
               />
-              <button className="button quiet" type="button" onClick={addGuest}>
+              <Button variant="tertiary" type="button" onPress={addGuest}>
                 Agregar
-              </button>
+              </Button>
             </div>
             <div className="chip-list">
               {guests.map((guest, index) => (
-                <button
+                <Button
+                  variant="tertiary"
                   className="status-chip pending"
                   type="button"
                   key={`${guest}-${index}`}
-                  onClick={() =>
+                  onPress={() =>
                     form.setValue(
                       'guests',
                       guests.filter((_, guestIndex) => guestIndex !== index),
@@ -426,7 +428,7 @@ export function CreateEventPage() {
                   aria-label={`Quitar a ${guest}`}
                 >
                   {guest} ×
-                </button>
+                </Button>
               ))}
             </div>
             <FieldError id="guests-error" message={form.formState.errors.guests?.message} />
@@ -454,16 +456,17 @@ export function CreateEventPage() {
                 }
               />
             </div>
-            <button className="button quiet" type="button" onClick={addLink}>
+            <Button variant="tertiary" type="button" onPress={addLink}>
               Agregar enlace
-            </button>
+            </Button>
             <div className="chip-list">
               {links.map((link, index) => (
-                <button
+                <Button
+                  variant="tertiary"
                   className="status-chip pending"
                   type="button"
                   key={`${link.url}-${index}`}
-                  onClick={() =>
+                  onPress={() =>
                     form.setValue(
                       'links',
                       links.filter((_, linkIndex) => linkIndex !== index),
@@ -473,7 +476,7 @@ export function CreateEventPage() {
                   aria-label={`Quitar enlace ${link.label}`}
                 >
                   {link.label} ×
-                </button>
+                </Button>
               ))}
             </div>
             <FieldError
@@ -487,9 +490,9 @@ export function CreateEventPage() {
           </fieldset>
           {mutation.isError && <ErrorMessage error={mutation.error} />}
           <div className="button-row">
-            <button className="button primary" type="submit" disabled={mutation.isPending}>
+            <Button variant="primary" type="submit" isDisabled={mutation.isPending}>
               {mutation.isPending ? 'Guardando…' : 'Crear evento'}
-            </button>
+            </Button>
             <Link className="button quiet" to={`/app/groups/${groupId}/events`}>
               Cancelar
             </Link>

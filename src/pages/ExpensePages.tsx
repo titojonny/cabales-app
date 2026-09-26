@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@heroui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -245,13 +246,14 @@ export function CreateExpensePage() {
               </p>
             )}
             {mutation.isError && <ErrorMessage error={mutation.error} />}
-            <button
-              className="button primary full"
+            <Button
+              variant="primary"
+              fullWidth
               type="submit"
-              disabled={mutation.isPending || participants.length === 0}
+              isDisabled={mutation.isPending || participants.length === 0}
             >
               {mutation.isPending ? 'Registrando…' : 'Registrar gasto'}
-            </button>
+            </Button>
           </form>
         </section>
         <aside className="split-summary">

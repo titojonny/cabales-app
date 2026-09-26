@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@heroui/react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
@@ -63,15 +64,15 @@ export function SettlementPage() {
               </option>
             ))}
           </select>
-          <button
-            className="button primary"
+          <Button
+            variant="primary"
             type="button"
-            onClick={createSettlement}
-            disabled={!eventId || generate.isPending}
+            onPress={createSettlement}
+            isDisabled={!eventId || generate.isPending}
           >
             <Icon name="transfer" />
             {generate.isPending ? 'Calculando…' : 'Cerrar evento seleccionado'}
-          </button>
+          </Button>
           {events.isError && <ErrorMessage error={events.error} />}
           {!events.isPending && !events.isError && openEvents.length === 0 && (
             <p className="muted">No hay eventos abiertos disponibles para liquidar.</p>
@@ -210,15 +211,15 @@ export function SettlementDetailPage() {
                   {transferStatusLabel(transfer.status)}
                 </span>
                 {transfer.status === 'PENDING' && canMarkPaid && (
-                  <button
-                    className="button quiet"
+                  <Button
+                    variant="tertiary"
                     type="button"
-                    disabled={markPaid.isPending}
-                    onClick={() => markPaid.mutate(transfer.id)}
+                    isDisabled={markPaid.isPending}
+                    onPress={() => markPaid.mutate(transfer.id)}
                   >
                     <Icon name="check" />
                     Marcar pagada
-                  </button>
+                  </Button>
                 )}
                 <details className="transfer-history">
                   <summary>Historial ({transfer.history.length})</summary>

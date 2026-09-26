@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { LandingPage, LoginPage, RegisterPage } from './pages/AuthPages';
+import { ForgotPasswordPage, LandingPage, LoginPage, RegisterPage } from './pages/AuthPages';
 import { CreateExpensePage, ExpenseDetailPage } from './pages/ExpensePages';
 import { EventDetailPage } from './pages/EventDetailPage';
 import {
@@ -13,6 +13,7 @@ import {
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { AcceptInvitationPage } from './pages/InvitationPage';
 import { SettlementDetailPage, SettlementPage } from './pages/SettlementPage';
+import { PrivacyPage, TermsPage } from './pages/LegalPages';
 
 /** Declara rutas públicas, protección fail-secure y módulos del MVP en un solo mapa. */
 export function App() {
@@ -21,6 +22,9 @@ export function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<AppShell />}>
           <Route index element={<DashboardPage />} />

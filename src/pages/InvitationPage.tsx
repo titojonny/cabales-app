@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@heroui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import { queryKeys } from '../api/queries';
 import { ErrorMessage, FieldError, StatusPanel } from '../components/ui';
@@ -22,7 +23,7 @@ export function GroupInvitationForm({ groupId }: { groupId: string }) {
     mutationFn: (values: InvitationValues) => cabalesApi.createInvitation(groupId, values),
   });
   const invitationUrl = mutation.data
-    ? `${window.location.origin}/app/invitations/accept?token=${encodeURIComponent(mutation.data.token)}`
+    ? `${window.location.origin}/app/invitations/accept#token=${encodeURIComponent(mutation.data.token)}`
     : '';
 
   return (
@@ -45,22 +46,22 @@ export function GroupInvitationForm({ groupId }: { groupId: string }) {
           <option value="ADMIN">Administrador</option>
         </select>
         {mutation.isError && <ErrorMessage error={mutation.error} />}
-        <button className="button primary" type="submit" disabled={mutation.isPending}>
+        <Button variant="primary" type="submit" isDisabled={mutation.isPending}>
           {mutation.isPending ? 'Creando…' : 'Crear invitación'}
-        </button>
+        </Button>
       </form>
       {mutation.data && (
         <div className="invitation-result" role="status">
           <strong>Invitación creada, sin envío de correo</strong>
           <p>Comparte este enlace únicamente con {mutation.data.invitation.email}.</p>
           <input aria-label="Enlace de invitación" readOnly value={invitationUrl} />
-          <button
-            className="button quiet"
+          <Button
+            variant="tertiary"
             type="button"
-            onClick={() => void navigator.clipboard?.writeText(invitationUrl)}
+            onPress={() => void navigator.clipboard?.writeText(invitationUrl)}
           >
             Copiar enlace
-          </button>
+          </Button>
           <small>Expira: {new Date(mutation.data.invitation.expiresAt).toLocaleString('es')}</small>
         </div>
       )}
@@ -70,11 +71,12 @@ export function GroupInvitationForm({ groupId }: { groupId: string }) {
 
 /** Confirma un token opaco y refresca la lista de grupos del usuario autenticado. */
 export function AcceptInvitationPage() {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const initialToken = new URLSearchParams(location.hash.replace(/^#/, '')).get('token') ?? '';
   const queryClient = useQueryClient();
   const form = useForm<AcceptInvitationValues>({
     resolver: zodResolver(acceptInvitationSchema),
-    defaultValues: { token: searchParams.get('token') ?? '' },
+    defaultValues: { token: initialToken },
   });
   const mutation = useMutation({
     mutationFn: ({ token }: AcceptInvitationValues) => cabalesApi.acceptInvitation(token),
@@ -115,9 +117,9 @@ export function AcceptInvitationPage() {
               message={form.formState.errors.token?.message}
             />
             {mutation.isError && <ErrorMessage error={mutation.error} />}
-            <button className="button primary" type="submit" disabled={mutation.isPending}>
+            <Button variant="primary" type="submit" isDisabled={mutation.isPending}>
               {mutation.isPending ? 'Aceptando…' : 'Aceptar invitación'}
-            </button>
+            </Button>
           </form>
         </section>
       )}

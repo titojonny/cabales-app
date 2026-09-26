@@ -34,15 +34,14 @@ La presentación no conoce `fetch` directamente. `src/api/http.ts` concentra coo
 
 ## Requisitos y puesta en marcha
 
-Se recomienda Node.js 24 y npm 11, que son las versiones usadas para verificar esta base.
+Se recomienda Node.js 24 y pnpm 11, que son las versiones usadas para verificar esta base.
 
 ```bash
-npm ci
-cp .env.example .env
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-En PowerShell, el equivalente del segundo comando es `Copy-Item .env.example .env`. Las variables públicas son:
+No se versiona un `.env.example` en este cliente. Si la API no está publicada bajo el mismo origen, crea un archivo `.env` local con estas variables públicas:
 
 ```env
 VITE_API_URL=http://localhost:3000/api/v1
@@ -53,20 +52,20 @@ VITE_CSRF_COOKIE_NAME=cabales_session_csrf
 
 ## Scripts
 
-| Comando                | Propósito                                             |
-| ---------------------- | ----------------------------------------------------- |
-| `npm run dev`          | Servidor de desarrollo Vite.                          |
-| `npm run build`        | Regenera iconos, valida tipos y produce `dist`.       |
-| `npm run preview`      | Sirve localmente la compilación.                      |
-| `npm run icons`        | Regenera PNG deterministas desde el script local.     |
-| `npm run format`       | Aplica Prettier a archivos mantenidos.                |
-| `npm run format:check` | Comprueba formato sin modificar.                      |
-| `npm run lint`         | Ejecuta ESLint.                                       |
-| `npm run typecheck`    | Ejecuta TypeScript sin emitir archivos.               |
-| `npm test`             | Ejecuta pruebas unitarias y de componentes.           |
-| `npm run test:e2e`     | Compila, sirve y ejecuta el humo móvil de Playwright. |
+| Comando             | Propósito                                             |
+| ------------------- | ----------------------------------------------------- |
+| `pnpm dev`          | Servidor de desarrollo Vite.                          |
+| `pnpm build`        | Regenera iconos, valida tipos y produce `dist`.       |
+| `pnpm preview`      | Sirve localmente la compilación.                      |
+| `pnpm icons`        | Regenera PNG deterministas desde el script local.     |
+| `pnpm format`       | Aplica Prettier a archivos mantenidos.                |
+| `pnpm format:check` | Comprueba formato sin modificar.                      |
+| `pnpm lint`         | Ejecuta ESLint.                                       |
+| `pnpm typecheck`    | Ejecuta TypeScript sin emitir archivos.               |
+| `pnpm test`         | Ejecuta pruebas unitarias y de componentes.           |
+| `pnpm test:e2e`     | Compila, sirve y ejecuta el humo móvil de Playwright. |
 
-La primera ejecución E2E requiere el navegador local: `npx playwright install chromium`.
+La primera ejecución E2E requiere el navegador local: `pnpm exec playwright install chromium`.
 
 ## Rutas
 
@@ -84,7 +83,8 @@ La primera ejecución E2E requiere el navegador local: `npx playwright install c
 | `/app/groups/:groupId/expenses/:expenseId`                          | Vista de gasto y reparto persistido.              |
 | `/app/groups/:groupId/settlements`                                  | Liquidaciones y estado de transferencias.         |
 | `/app/groups/:groupId/settlements/:settlementId`                    | Detalle y transferencias de una liquidación.      |
-| `/app/invitations/accept?token=...`                                 | Confirmación protegida de invitación.             |
+| `/app/invitations/accept#token=...`                                 | Confirmación protegida de invitación.             |
+| `/privacy`, `/terms`                                                | Aviso base de privacidad y términos de uso.       |
 | `/app/cabudas`, `/app/docs`, `/app/statistics`, `/app/achievements` | Módulos pendientes, marcados como no disponibles. |
 | `/app/mas`                                                          | Índice de módulos pendientes.                     |
 
@@ -130,7 +130,7 @@ El manifest incluye iconos PNG locales de 192 y 512 píxeles, color de tema, alc
 
 La interfaz avisa cuando se pierde conexión y explica que no puede consultar ni guardar. No existe cola de escrituras offline porque el MVP no define todavía resolución de conflictos e idempotencia persistida. Cuando Workbox detecta una versión nueva, muestra una acción explícita para actualizar.
 
-La instalación exige producción HTTPS o `localhost`. El service worker se valida sobre `npm run preview`, no durante el flujo normal de Vite en desarrollo.
+La instalación exige producción HTTPS o `localhost`. El service worker se valida sobre `pnpm preview`, no durante el flujo normal de Vite en desarrollo.
 
 ## Accesibilidad y diseño
 
@@ -142,9 +142,11 @@ Los tokens mantienen contraste sobre una identidad glassmorphism moderada con fo
 
 Vitest cubre conservación de centavos, validación, cookie CSRF tras recarga, rutas y bodies reales, idempotencia recibida por intento, esquemas raw estrictos, transformaciones Prisma y semántica accesible. Playwright contiene un humo móvil para landing y acceso.
 
+La verificación actual del repositorio pasa typecheck, lint, formato, build y las 15 pruebas unitarias y de componentes. El build genera un chunk JavaScript principal de aproximadamente 601 kB minificado; Vite lo reporta como advertencia no bloqueante y queda como trabajo futuro de división de código.
+
 Limitaciones conocidas del MVP:
 
-- No existe envío de correo: OWNER/ADMIN debe compartir manualmente el enlace de invitación mostrado una sola vez.
+- No existe envío de correo: OWNER/ADMIN debe compartir manualmente el enlace de invitación mostrado una sola vez. El token se transporta en el fragmento de URL para no enviarlo en Referer, pero sigue siendo un bearer token y debe compartirse únicamente con la persona destinataria.
 - Eliminar integrantes no está implementado; el divisor usa el padrón devuelto por el detalle de evento.
 - Crear liquidaciones puede devolver 403 para miembros sin rol OWNER/ADMIN; la API conserva la decisión de autorización.
 - Cabudas, Docs, Estadísticas y Logros quedan pendientes y no realizan consultas.

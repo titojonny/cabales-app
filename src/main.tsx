@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toast } from '@heroui/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import './styles.css';
 
@@ -27,7 +29,10 @@ createRoot(root).render(
             Saltar al contenido
           </a>
           <NetworkStatus />
-          <App />
+          <Toast.Provider placement="top end" maxVisibleToasts={4} />
+          <AppErrorBoundary>
+            <App />
+          </AppErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -16,6 +16,12 @@ const rawUserSchema = z.strictObject({
   avatarUrl: z.string().url().nullable(),
 });
 
+const rawGroupMemberUserSchema = z.strictObject({
+  id,
+  displayName: z.string().min(2).max(120),
+  avatarUrl: z.string().url().nullable(),
+});
+
 const rawGroupBase = {
   id,
   name: z.string().min(2).max(120),
@@ -81,7 +87,7 @@ export const groupDetailSchema = z
         id,
         role,
         joinedAt: date,
-        user: rawUserSchema,
+        user: rawGroupMemberUserSchema,
       }),
     ),
   })

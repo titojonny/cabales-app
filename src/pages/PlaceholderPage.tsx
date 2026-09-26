@@ -12,11 +12,11 @@ const modules = {
 
 /** Marca módulos fuera del MVP sin inventar cifras, actividad ni disponibilidad. */
 export function PlaceholderPage({ module }: { module: keyof typeof modules }) {
-  const item = modules[module];
+  const moduleDefinition = modules[module];
   return (
-    <PageHeader eyebrow="Próximamente · No disponible" title={item.title}>
+    <PageHeader eyebrow="Próximamente · No disponible" title={moduleDefinition.title}>
       <StatusPanel title="Módulo pendiente">
-        <p>{item.copy}</p>
+        <p>{moduleDefinition.copy}</p>
         <p>Esta pantalla es un marcador honesto: todavía no consulta ni presenta datos.</p>
       </StatusPanel>
       {module === 'more' && (

@@ -28,6 +28,11 @@ const user = {
   displayName: 'Ana',
   avatarUrl: null,
 };
+const memberUser = {
+  id: ids.user,
+  displayName: 'Ana',
+  avatarUrl: null,
+};
 
 describe('adaptadores de respuesta', () => {
   it('acepta auth con o sin CSRF y adapta las dos formas reales de grupo', () => {
@@ -63,7 +68,7 @@ describe('adaptadores de respuesta', () => {
       currency: 'USD',
       createdAt: timestamp,
       updatedAt: timestamp,
-      members: [{ id: ids.member, role: 'OWNER', joinedAt: timestamp, user }],
+      members: [{ id: ids.member, role: 'OWNER', joinedAt: timestamp, user: memberUser }],
     });
     expect(detail.members[0]?.user.displayName).toBe('Ana');
   });

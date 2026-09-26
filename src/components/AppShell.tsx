@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { Button } from '@heroui/react';
 import { useAuth } from '../auth/AuthProvider';
 import { Icon } from './ui';
 
@@ -37,9 +38,15 @@ export function AppShell() {
         <div className="session-card">
           <span className="eyebrow">Sesión</span>
           <strong>{session?.user.displayName}</strong>
-          <button type="button" className="text-button" onClick={logout} disabled={isLoggingOut}>
+          <Button
+            variant="tertiary"
+            type="button"
+            className="text-button"
+            onPress={logout}
+            isDisabled={isLoggingOut}
+          >
             {isLoggingOut ? 'Cerrando…' : 'Cerrar sesión'}
-          </button>
+          </Button>
         </div>
       </aside>
       <main className="app-content" id="contenido">

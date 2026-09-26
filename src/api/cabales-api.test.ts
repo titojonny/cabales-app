@@ -204,7 +204,6 @@ describe('cabalesApi financiero', () => {
           joinedAt: timestamp,
           user: {
             id: userId,
-            email: 'ana@example.com',
             displayName: 'Ana',
             avatarUrl: null,
           },

@@ -1,11 +1,19 @@
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 /** Construye el shell instalable, proxy local hacia Express y red directa para todo dato de API. */
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  define:
+    mode === 'test'
+      ? {
+          'import.meta.env.VITE_API_URL': JSON.stringify(''),
+        }
+      : undefined,
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
@@ -59,4 +67,4 @@ export default defineConfig({
     css: true,
     coverage: { reporter: ['text', 'html'] },
   },
-});
+}));
