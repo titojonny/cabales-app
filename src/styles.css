@@ -1074,6 +1074,9 @@ legend {
   .field-pair {
     grid-template-columns: 2fr 1fr;
   }
+  .field-pair.even {
+    grid-template-columns: 1fr 1fr;
+  }
   .event-row {
     grid-template-columns: 54px 1fr auto;
   }
@@ -1501,7 +1504,7 @@ legend {
   background: var(--color-danger);
 }
 .field-pair.even {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
 }
 .movement-type,
 .direction,
@@ -1556,9 +1559,13 @@ legend {
 }
 .preferences {
   width: 100%;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.preferences table {
+  width: 100%;
   min-width: 420px;
   border-collapse: collapse;
-  font-size: 0.86rem;
 }
 .preferences th,
 .preferences td {
@@ -1569,6 +1576,38 @@ legend {
 .preferences td input {
   width: 22px;
   height: 22px;
+}
+.push-settings {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+.push-settings h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+.push-state {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+.push-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.push-actions .form-error {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.ocr-local-notice {
+  margin: 0.8rem 0;
+  padding: 0.75rem;
+  border-left: 3px solid #ffd166;
+  color: #ffe7a8;
+  background: rgba(255, 209, 102, 0.12);
 }
 .achievement-grid {
   display: grid;

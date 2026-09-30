@@ -153,6 +153,7 @@ export const ocrJobSchema = z.object({
   proposal: ocrProposalSchema.nullable(),
   maxAttempts: int,
   canRetry: z.boolean(),
+  provider: z.string(),
 });
 export const ocrJobListSchema = z.array(ocrJobSchema);
 
@@ -293,6 +294,10 @@ export const notificationPreferencesSchema = z.object({
   ),
   channels: z.object({ inApp: z.boolean(), email: z.boolean(), push: z.boolean() }),
 });
+export const pushConfigSchema = z.object({
+  enabled: z.boolean(),
+  publicKey: z.string().nullable(),
+});
 
 /** Logro con progreso transparente. */
 export const achievementSchema = z.object({
@@ -340,6 +345,7 @@ export type Statistics = z.output<typeof statisticsSchema>;
 export type Notification = z.output<typeof notificationSchema>;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationPreferences = z.output<typeof notificationPreferencesSchema>;
+export type PushConfig = z.output<typeof pushConfigSchema>;
 export type Achievement = z.output<typeof achievementSchema>;
 export type PrivacyRequest = z.output<typeof privacyRequestSchema>;
 export type PrivacyRequestType = z.output<typeof privacyType>;

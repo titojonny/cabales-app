@@ -1,10 +1,12 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import responses from '../test/fixtures/api-responses.json';
 import { apiResponse, renderPage, routeFetch } from '../test/render';
 import { ForgotPasswordPage } from './AuthPages';
 import { CabudasPage } from './CabudasPage';
 import { AcceptInvitationPage } from './InvitationPage';
+import { OcrProviderNotice } from './DocsPage';
+import { StatisticsPage } from './StatisticsPage';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -65,5 +67,56 @@ describe('Cabudas', () => {
       await screen.findByRole('heading', { name: 'Tus cuentas pendientes' }),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText(/4,50|4\.50/).length).toBeGreaterThan(0));
+  });
+});
+
+describe('OCR y estadísticas', () => {
+  it('advierte cuando la propuesta proviene del proveedor local', () => {
+    const { rerender } = render(<OcrProviderNotice provider="local" />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/datos de prueba de desarrollo/i);
+    rerender(<OcrProviderNotice provider="s3" />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('exporta CSV usando los filtros actuales y la respuesta de la API', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/groups': () => apiResponse([]),
+      '/api/v1/statistics/summary': () =>
+        apiResponse({
+          range: { from: '2026-01-01T00:00:00.000Z', to: '2026-03-01T00:00:00.000Z' },
+          currency: null,
+          availableCurrencies: [],
+          granularity: 'week',
+          totals: {
+            spentCents: 0,
+            expenseCount: 0,
+            myShareCents: 0,
+            myPaidCents: 0,
+            averageExpenseCents: 0,
+          },
+          byCategory: [],
+          byGroup: [],
+          byEvent: [],
+          byPerson: [],
+          trend: [],
+          budgets: [],
+        }),
+      '/api/v1/statistics/summary/export': () =>
+        new Response('section,label\r\ntotals,Total\r\n', {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="cabales-statistics.csv"',
+          },
+        }),
+    });
+    render(<StatisticsPage />);
+    const exportButton = await screen.findByRole('button', { name: 'Exportar CSV' });
+    fireEvent.click(exportButton);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/statistics/summary/export'),
+        expect.objectContaining({ credentials: 'include' }),
+      ),
+    );
   });
 });

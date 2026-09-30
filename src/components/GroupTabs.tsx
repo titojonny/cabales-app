@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 
+/** Navegación contextual entre el resumen, eventos y liquidaciones de un grupo. */
 /**
  * Secciones del grupo como navegación (no como tabs ARIA: cada sección es una ruta propia).
  * `aria-current="page"` lo añade NavLink en la sección activa.

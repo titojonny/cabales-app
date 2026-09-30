@@ -1,6 +1,6 @@
 import { Button } from '@heroui/react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { moduleKeys, moduleQueries } from '../api/module-queries';
 import type {
@@ -9,7 +9,21 @@ import type {
   NotificationType,
 } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
-import { ErrorMessage, ErrorState, formatDate, LoadingState, StatusPanel } from '../components/ui';
+import {
+  ErrorMessage,
+  ErrorState,
+  formatDate,
+  LoadingState,
+  StatusPanel,
+} from '../components/ui';
+import {
+  applicationServerKey,
+  getNotificationPermission,
+  getPushCapability,
+  permissionState,
+  subscriptionPayload,
+  type PushPermissionState,
+} from '../push/push';
 import { PageHeader } from './GroupPages';
 
 const typeLabel: Record<NotificationType, string> = {
@@ -47,6 +61,204 @@ function notificationLink(notification: Notification): string | undefined {
   return undefined;
 }
 
+function pushStateLabel(state: PushPermissionState): string {
+  return {
+    disabled: 'deshabilitado',
+    unsupported: 'no compatible',
+    'permission-not-requested': 'permiso no solicitado',
+    denied: 'permiso denegado',
+    'not-subscribed': 'no activado',
+    enabled: 'activado',
+  }[state];
+}
+
+/** Configuración de Web Push: pedir permiso solo desde el botón visible. */
+function PushSettings() {
+  const capability = getPushCapability();
+  const config = useQuery(moduleQueries.pushConfig());
+  const [state, setState] = useState<PushPermissionState>('permission-not-requested');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const [retryAction, setRetryAction] = useState<'activate' | 'deactivate' | null>(null);
+  const subscriptionRef = useRef<PushSubscription | null>(null);
+  const endpointRef = useRef<string>();
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const sync = async () => {
+      if (config.isPending) return;
+      if (config.isError) return;
+      if (!config.data?.enabled) {
+        setState('disabled');
+        return;
+      }
+      if (!capability.supported) {
+        setState('unsupported');
+        return;
+      }
+      const permission = getNotificationPermission();
+      if (permission === 'denied') return setState('denied');
+      if (permission !== 'granted') return setState(permissionState());
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (cancelled) return;
+        subscriptionRef.current = subscription;
+        endpointRef.current = subscription?.endpoint;
+        setState(subscription ? 'enabled' : 'not-subscribed');
+      } catch {
+        if (!cancelled) {
+          setError(new Error('No pudimos consultar el estado de las notificaciones.'));
+          setRetryAction('activate');
+        }
+      }
+    };
+    void sync();
+    return () => {
+      cancelled = true;
+    };
+  }, [capability.supported, config.data, config.isError, config.isPending]);
+
+  const activate = async () => {
+    if (!config.data?.enabled || !config.data.publicKey || !capability.supported) return;
+    setBusy(true);
+    setError(undefined);
+    setRetryAction(null);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setState(permission === 'denied' ? 'denied' : 'permission-not-requested');
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey(config.data.publicKey),
+        }));
+      await modulesApi.createPushSubscription(subscriptionPayload(subscription));
+      subscriptionRef.current = subscription;
+      endpointRef.current = subscription.endpoint;
+      setState('enabled');
+    } catch (cause) {
+      if (!subscriptionRef.current) {
+        const registration = await navigator.serviceWorker.ready.catch(() => undefined);
+        await registration?.pushManager.getSubscription().then((subscription) => subscription?.unsubscribe()).catch(() => undefined);
+      }
+      setError(cause);
+      setRetryAction('activate');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deactivate = async () => {
+    setBusy(true);
+    setError(undefined);
+    setRetryAction(null);
+    try {
+      const subscription = subscriptionRef.current ?? (await navigator.serviceWorker.ready).pushManager.getSubscription();
+      const endpoint = subscription?.endpoint ?? endpointRef.current;
+      if (subscription) await subscription.unsubscribe();
+      if (endpoint) await modulesApi.deletePushSubscription(endpoint);
+      subscriptionRef.current = null;
+      endpointRef.current = undefined;
+      setState('not-subscribed');
+    } catch (cause) {
+      setError(cause);
+      setRetryAction('deactivate');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let description = '';
+  if (config.isPending) description = 'Comprobando disponibilidad…';
+  else if (config.isError) description = 'No pudimos consultar la configuración push.';
+  else if (!config.data?.enabled)
+    description = 'Las notificaciones push están deshabilitadas en este servidor. Los avisos siguen dentro de la app.';
+  else if (!config.data.publicKey)
+    description = 'El servidor anunció push, pero no entregó una clave pública válida. Intenta más tarde.';
+  else if (capability.reason === 'ios-install')
+    description = 'En iPhone o iPad, instala Cabales como app desde Safari para activar avisos push.';
+  else if (capability.reason === 'secure-context')
+    description = 'Los avisos push requieren una conexión segura (HTTPS).';
+  else if (state === 'denied')
+    description = 'El permiso está denegado. Para reactivarlo, abre los ajustes del sitio en tu navegador, permite Notificaciones y vuelve a pulsar Activar.';
+  else if (state === 'enabled') description = 'Recibirás avisos importantes aunque no tengas Cabales abierto.';
+  else description = 'Los avisos también seguirán disponibles dentro de la app.';
+
+  const canActivate = Boolean(
+    config.data?.enabled && config.data.publicKey && capability.supported && state !== 'enabled',
+  );
+  const canDeactivate = state === 'enabled';
+  return (
+    <section className="push-settings glass-panel" aria-labelledby="push-title">
+      <div>
+        <h2 id="push-title">Avisos push</h2>
+        <p id="push-description" className="muted small">
+          {description}
+        </p>
+      </div>
+      <p className="push-state" aria-live="polite" aria-busy={busy}>
+        Estado: <strong>{config.isPending ? 'comprobando' : pushStateLabel(state)}</strong>
+      </p>
+      {config.isError && (
+        <div className="push-actions">
+          <ErrorMessage error={config.error} />
+          <Button variant="tertiary" type="button" onPress={() => void config.refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      )}
+      {error && (
+        <div ref={errorRef} className="push-actions" tabIndex={-1}>
+          <ErrorMessage error={error} />
+          <Button
+            variant="tertiary"
+            type="button"
+            isDisabled={busy}
+            onPress={() => void (retryAction === 'deactivate' ? deactivate() : activate())}
+          >
+            Reintentar
+          </Button>
+        </div>
+      )}
+      <div className="push-actions">
+        {canActivate && (
+          <Button
+            variant="primary"
+            type="button"
+            aria-describedby="push-description"
+            isDisabled={busy}
+            onPress={() => void activate()}
+          >
+            {busy ? 'Activando…' : 'Activar avisos push'}
+          </Button>
+        )}
+        {canDeactivate && (
+          <Button
+            variant="tertiary"
+            type="button"
+            aria-describedby="push-description"
+            isDisabled={busy}
+            onPress={() => void deactivate()}
+          >
+            {busy ? 'Desactivando…' : 'Desactivar avisos push'}
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function Preferences() {
   const queryClient = useQueryClient();
   const preferences = useQuery(moduleQueries.notificationPreferences());
@@ -80,6 +292,7 @@ function Preferences() {
               <th scope="col">Aviso</th>
               <th scope="col">En la app</th>
               <th scope="col">Correo</th>
+              <th scope="col">Push</th>
             </tr>
           </thead>
           <tbody>
@@ -93,6 +306,15 @@ function Preferences() {
                     checked={item.inApp}
                     disabled={save.isPending}
                     onChange={(event) => toggle(item.type, 'inApp', event.target.checked)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${typeLabel[item.type]} como aviso push`}
+                    checked={item.push}
+                    disabled={save.isPending || !channels.push}
+                    onChange={(event) => toggle(item.type, 'push', event.target.checked)}
                   />
                 </td>
                 <td>
@@ -158,7 +380,12 @@ export function NotificationsPage() {
         </div>
       }
     >
-      {showPreferences && <Preferences />}
+      {showPreferences && (
+        <>
+          <PushSettings />
+          <Preferences />
+        </>
+      )}
       <div className="segmented" role="radiogroup" aria-label="Filtrar avisos">
         {(
           [

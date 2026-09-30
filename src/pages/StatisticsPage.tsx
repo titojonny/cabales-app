@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { Button } from '@heroui/react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { moduleKeys } from '../api/module-queries';
 import { modulesApi } from '../api/modules-api';
+import { downloadBlob, filenameFromContentDisposition } from '../api/download';
 import { queries } from '../api/queries';
 import { ErrorState, LoadingState, ProgressBar, StatusPanel } from '../components/ui';
 import { formatMoney } from '../domain/money';
@@ -63,6 +65,15 @@ export function StatisticsPage() {
     queryKey: moduleKeys.statistics({ range, groupId, currency }),
     queryFn: () => modulesApi.statistics(filters),
   });
+  const exportCsv = useMutation({
+    mutationFn: () => modulesApi.statisticsExport(filters),
+    onSuccess: ({ blob, headers }) => {
+      downloadBlob(
+        blob,
+        filenameFromContentDisposition(headers.get('Content-Disposition'), 'cabales-statistics.csv'),
+      );
+    },
+  });
 
   const controls = (
     <div className="filter-bar">
@@ -102,6 +113,16 @@ export function StatisticsPage() {
           </select>
         </label>
       )}
+      <Button
+        variant="secondary"
+        type="button"
+        isDisabled={exportCsv.isPending}
+        onPress={() => exportCsv.mutate()}
+      >
+        {exportCsv.isPending ? 'Exportando…' : 'Exportar CSV'}
+      </Button>
+      {exportCsv.isError && <span role="alert">No pudimos exportar las estadísticas. Intenta de nuevo.</span>}
+      {exportCsv.isSuccess && <span aria-live="polite">CSV descargado.</span>}
     </div>
   );
 

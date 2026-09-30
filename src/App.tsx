@@ -1,38 +1,50 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import {
-  ForgotPasswordPage,
-  LandingPage,
-  LoginPage,
-  RegisterPage,
-  ResetPasswordPage,
-  VerifyEmailPage,
-} from './pages/AuthPages';
-import { CreateExpensePage, ExpenseDetailPage } from './pages/ExpensePages';
-import { EventDetailPage } from './pages/EventDetailPage';
-import {
-  CreateEventPage,
-  CreateGroupPage,
-  DashboardPage,
-  GroupDetailPage,
-} from './pages/GroupPages';
-import { AccountPage } from './pages/AccountPage';
-import { AchievementsPage } from './pages/AchievementsPage';
-import { BudgetsPage } from './pages/BudgetPages';
-import { CabudasPage } from './pages/CabudasPage';
-import { DocsPage } from './pages/DocsPage';
-import { FundDetailPage, FundsPage } from './pages/FundPages';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { StatisticsPage } from './pages/StatisticsPage';
-import { AcceptInvitationPage } from './pages/InvitationPage';
-import { SettlementDetailPage, SettlementPage } from './pages/SettlementPage';
-import { PrivacyPage, TermsPage } from './pages/LegalPages';
+
+const LandingPage = lazy(() => import('./pages/AuthPages').then(({ LandingPage }) => ({ default: LandingPage })));
+const LoginPage = lazy(() => import('./pages/AuthPages').then(({ LoginPage }) => ({ default: LoginPage })));
+const RegisterPage = lazy(() => import('./pages/AuthPages').then(({ RegisterPage }) => ({ default: RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/AuthPages').then(({ ForgotPasswordPage }) => ({ default: ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/AuthPages').then(({ ResetPasswordPage }) => ({ default: ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('./pages/AuthPages').then(({ VerifyEmailPage }) => ({ default: VerifyEmailPage })));
+const CreateExpensePage = lazy(() => import('./pages/ExpensePages').then(({ CreateExpensePage }) => ({ default: CreateExpensePage })));
+const ExpenseDetailPage = lazy(() => import('./pages/ExpensePages').then(({ ExpenseDetailPage }) => ({ default: ExpenseDetailPage })));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage').then(({ EventDetailPage }) => ({ default: EventDetailPage })));
+const CreateEventPage = lazy(() => import('./pages/GroupPages').then(({ CreateEventPage }) => ({ default: CreateEventPage })));
+const CreateGroupPage = lazy(() => import('./pages/GroupPages').then(({ CreateGroupPage }) => ({ default: CreateGroupPage })));
+const DashboardPage = lazy(() => import('./pages/GroupPages').then(({ DashboardPage }) => ({ default: DashboardPage })));
+const GroupDetailPage = lazy(() => import('./pages/GroupPages').then(({ GroupDetailPage }) => ({ default: GroupDetailPage })));
+const AccountPage = lazy(() => import('./pages/AccountPage').then(({ AccountPage }) => ({ default: AccountPage })));
+const AchievementsPage = lazy(() => import('./pages/AchievementsPage').then(({ AchievementsPage }) => ({ default: AchievementsPage })));
+const BudgetsPage = lazy(() => import('./pages/BudgetPages').then(({ BudgetsPage }) => ({ default: BudgetsPage })));
+const CabudasPage = lazy(() => import('./pages/CabudasPage').then(({ CabudasPage }) => ({ default: CabudasPage })));
+const DocsPage = lazy(() => import('./pages/DocsPage').then(({ DocsPage }) => ({ default: DocsPage })));
+const FundDetailPage = lazy(() => import('./pages/FundPages').then(({ FundDetailPage }) => ({ default: FundDetailPage })));
+const FundsPage = lazy(() => import('./pages/FundPages').then(({ FundsPage }) => ({ default: FundsPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(({ NotificationsPage }) => ({ default: NotificationsPage })));
+const StatisticsPage = lazy(() => import('./pages/StatisticsPage').then(({ StatisticsPage }) => ({ default: StatisticsPage })));
+const AcceptInvitationPage = lazy(() => import('./pages/InvitationPage').then(({ AcceptInvitationPage }) => ({ default: AcceptInvitationPage })));
+const SettlementDetailPage = lazy(() => import('./pages/SettlementPage').then(({ SettlementDetailPage }) => ({ default: SettlementDetailPage })));
+const SettlementPage = lazy(() => import('./pages/SettlementPage').then(({ SettlementPage }) => ({ default: SettlementPage })));
+const PrivacyPage = lazy(() => import('./pages/LegalPages').then(({ PrivacyPage }) => ({ default: PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/LegalPages').then(({ TermsPage }) => ({ default: TermsPage })));
+
+function RouteFallback() {
+  return (
+    <main className="status-panel" aria-live="polite" aria-busy="true">
+      <h1>Cargando sección</h1>
+      <p className="status-copy">Un momento…</p>
+    </main>
+  );
+}
 
 /** Declara rutas públicas, protección fail-secure y módulos del MVP en un solo mapa. */
 export function App() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -74,6 +86,7 @@ export function App() {
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

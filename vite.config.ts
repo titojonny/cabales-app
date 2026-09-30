@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
@@ -84,20 +87,22 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.includes('/api/v1/'),
-            handler: 'NetworkOnly',
-            method: 'GET',
-          },
-        ],
-        cleanupOutdatedCaches: true,
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query'],
+          ui: ['@heroui/react', '@heroui/styles', 'lucide-react'],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false },

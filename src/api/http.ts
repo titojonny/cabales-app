@@ -67,6 +67,11 @@ export interface ResponseMeta {
   idempotencyReplayed?: boolean;
 }
 
+export interface FileResponse {
+  blob: Blob;
+  headers: Headers;
+}
+
 /** Operación de telemetría sin query string: evita registrar nombres de archivo o filtros. */
 function operationName(path: string): string {
   return path.split('?')[0] ?? path;
@@ -90,6 +95,53 @@ function captureCsrf(data: unknown): void {
 /** Ejecuta una petición con cookie, timeout, trazabilidad y validación del sobre. */
 export async function request<T>(path: string, options: RequestOptions<T> = {}): Promise<T> {
   return (await requestWithMeta(path, options)).data;
+}
+
+/** Descarga una respuesta binaria conservando cookies de sesión y sus cabeceras. */
+export async function requestFile(
+  path: string,
+  options: Omit<RequestOptions<never>, 'body' | 'rawBody' | 'schema'> = {},
+): Promise<FileResponse> {
+  const operation = operationName(path);
+  const method = (options.method || 'GET').toUpperCase();
+  const requestId = crypto.randomUUID();
+  const headers = new Headers(options.headers);
+  headers.set('Accept', 'text/csv, application/octet-stream');
+  headers.set('X-Request-ID', requestId);
+  if (mutationMethods.has(method) && !csrfToken) csrfToken = readCsrfCookie();
+  if (mutationMethods.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
+  const init = options;
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      method,
+      headers,
+      credentials: 'include',
+      signal: init.signal ?? AbortSignal.timeout(60_000),
+    });
+  } catch {
+    recordTelemetry({ event: 'api_failure', operation, requestId });
+    throw new HttpError(
+      navigator.onLine ? 'No pudimos descargar el archivo. Intenta de nuevo.' : 'No hay conexión. El archivo no se descargó.',
+      0,
+      'NETWORK_ERROR',
+    );
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    if (response.status === 401) {
+      clearCsrfToken();
+      unauthorizedListeners.forEach((listener) => listener());
+    }
+    recordTelemetry({ event: 'api_failure', operation, status: response.status, requestId });
+    throw new HttpError(
+      payload?.error?.message || 'No fue posible descargar el archivo.',
+      response.status,
+      payload?.error?.code || 'HTTP_ERROR',
+    );
+  }
+  return { blob: await response.blob(), headers: response.headers };
 }
 
 /** Igual que `request`, pero conserva `meta` para cursores e idempotencia. */

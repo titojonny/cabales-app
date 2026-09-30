@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { CreatedInvitation, Invitation, InvitationPreview, User } from './contracts';
-import { request, requestWithMeta } from './http';
+import { request, requestFile, requestWithMeta } from './http';
 import {
   achievementListSchema,
   budgetDetailSchema,
@@ -25,6 +25,7 @@ import {
   notificationSchema,
   ocrJobListSchema,
   ocrJobSchema,
+  pushConfigSchema,
   privacyRequestListSchema,
   privacyRequestSchema,
   statisticsSchema,
@@ -229,6 +230,8 @@ export const modulesApi = {
     requestWithMeta(`/cabudas/history${toQuery(filters)}`, { schema: cabudasHistorySchema }),
   statistics: (filters: { from?: string; to?: string; groupId?: string; currency?: string }) =>
     request(`/statistics/summary${toQuery(filters)}`, { schema: statisticsSchema }),
+  statisticsExport: (filters: { from?: string; to?: string; groupId?: string; currency?: string }) =>
+    requestFile(`/statistics/summary/export${toQuery(filters)}`),
 
   // Avisos.
   notifications: (status: 'ACTIVE' | 'UNREAD' | 'ARCHIVED' = 'ACTIVE', cursor?: string) =>
@@ -249,6 +252,13 @@ export const modulesApi = {
   readAllNotifications: () => request('/notifications/read-all', { method: 'POST' }),
   notificationPreferences: () =>
     request('/notifications/preferences', { schema: notificationPreferencesSchema }),
+  pushConfig: () => request('/notifications/push-config', { schema: pushConfigSchema }),
+  createPushSubscription: (input: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+  }) => request('/notifications/push-subscriptions', { method: 'POST', body: input }),
+  deletePushSubscription: (endpoint: string) =>
+    request('/notifications/push-subscriptions', { method: 'DELETE', body: { endpoint } }),
   updateNotificationPreferences: (preferences: NotificationPreferences['preferences']) =>
     request('/notifications/preferences', {
       method: 'PUT',

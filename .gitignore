@@ -1,5 +1,6 @@
 # Dependencias y resultados reproducibles.
 node_modules/
+.pnpm-store/
 dist/
 coverage/
 playwright-report/

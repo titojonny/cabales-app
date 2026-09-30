@@ -38,6 +38,16 @@ async function download(document_: Document) {
   anchor.click();
 }
 
+/** Abre una URL firmada recién emitida; nunca conserva el enlace temporal. */
+async function view(document_: Document) {
+  const { url } = await modulesApi.documentDownloadUrl(document_.id);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  anchor.click();
+}
+
 function UploadForm({ groups }: { groups: Array<{ id: string; name: string }> }) {
   const queryClient = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
@@ -101,6 +111,16 @@ function UploadForm({ groups }: { groups: Array<{ id: string; name: string }> })
 }
 
 /** Lectura de comprobantes: propone datos y exige vincularlos a un gasto revisado. */
+export function OcrProviderNotice({ provider }: { provider: string }) {
+  if (provider !== 'local') return null;
+  return (
+    <p className="ocr-local-notice" role="alert">
+      Esta propuesta proviene del proveedor local: son datos de prueba de desarrollo y no deben
+      confirmarse como reales. Revísalos contra el comprobante antes de vincularlos.
+    </p>
+  );
+}
+
 function OcrPanel({ document_ }: { document_: Document }) {
   const queryClient = useQueryClient();
   const jobs = useQuery({
@@ -188,6 +208,7 @@ function OcrPanel({ document_ }: { document_: Document }) {
           )}
           {latest.status === 'SUCCEEDED' && latest.proposal && (
             <>
+              <OcrProviderNotice provider={latest.provider} />
               <dl className="proposal">
                 <div>
                   <dt>Comercio</dt>
@@ -263,6 +284,7 @@ function DocumentRow({ document_, groupName }: { document_: Document; groupName?
   const [expanded, setExpanded] = useState(false);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: moduleKeys.documentsRoot });
   const downloadMutation = useMutation({ mutationFn: () => download(document_) });
+  const viewMutation = useMutation({ mutationFn: () => view(document_) });
   const rename = useMutation({
     mutationFn: (name: string) => modulesApi.renameDocument(document_.id, name),
     onSuccess: refresh,
@@ -272,7 +294,7 @@ function DocumentRow({ document_, groupName }: { document_: Document; groupName?
     onSuccess: refresh,
   });
   const canEdit = document_.access !== 'VIEW';
-  const error = downloadMutation.error ?? rename.error ?? remove.error;
+  const error = downloadMutation.error ?? viewMutation.error ?? rename.error ?? remove.error;
   return (
     <li className="glass-panel document-row">
       <div className="document-main">
@@ -289,6 +311,16 @@ function DocumentRow({ document_, groupName }: { document_: Document; groupName?
         </span>
       </div>
       <div className="row-actions">
+        <Button
+          variant="tertiary"
+          size="sm"
+          type="button"
+          isDisabled={viewMutation.isPending}
+          onPress={() => viewMutation.mutate()}
+          aria-label={`Ver ${document_.name}`}
+        >
+          Ver
+        </Button>
         <Button
           variant="tertiary"
           size="sm"

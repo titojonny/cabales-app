@@ -23,6 +23,7 @@ export const moduleKeys = {
   notificationsRoot: ['notifications'] as const,
   unreadCount: ['notifications', 'unread'] as const,
   notificationPreferences: ['notifications', 'preferences'] as const,
+  pushConfig: ['notifications', 'push-config'] as const,
   achievements: ['achievements'] as const,
   privacyRequests: ['privacy'] as const,
 };
@@ -65,6 +66,8 @@ export const moduleQueries = {
       queryKey: moduleKeys.notificationPreferences,
       queryFn: modulesApi.notificationPreferences,
     }),
+  pushConfig: () =>
+    queryOptions({ queryKey: moduleKeys.pushConfig, queryFn: modulesApi.pushConfig }),
   achievements: () =>
     queryOptions({ queryKey: moduleKeys.achievements, queryFn: modulesApi.achievements }),
   privacyRequests: () =>
