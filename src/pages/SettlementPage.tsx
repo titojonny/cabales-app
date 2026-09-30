@@ -5,11 +5,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
+import { GroupTabs } from '../components/GroupTabs';
 import { ErrorMessage, Icon, StatusPanel } from '../components/ui';
 import { formatMoney } from '../domain/money';
 import { fallbackParticipantLabel, participantLabelMap } from '../domain/participants';
 import { PageHeader } from './GroupPages';
 
+/** Evento seleccionado y clave estable usados para repetir la creación de un cierre sin duplicarlo. */
 interface SettlementAttempt {
   eventId: string;
   idempotencyKey: string;
@@ -250,18 +252,21 @@ export function SettlementDetailPage() {
   );
 }
 
+/** Convierte el estado de persistencia del cierre en texto de interfaz en español. */
 function settlementStatusLabel(status: 'OPEN' | 'COMPLETED' | 'CANCELLED'): string {
   if (status === 'OPEN') return 'Abierta';
   if (status === 'COMPLETED') return 'Completada';
   return 'Cancelada';
 }
 
+/** Asigna la clase visual asociada al estado del cierre sin introducir estados nuevos. */
 function settlementStatusClass(status: 'OPEN' | 'COMPLETED' | 'CANCELLED'): string {
   if (status === 'OPEN') return 'pending';
   if (status === 'COMPLETED') return 'completed';
   return 'cancelled';
 }
 
+/** Traduce el estado de una transferencia para lectura humana. */
 function transferStatusLabel(status: 'PENDING' | 'PAID' | 'DISPUTED' | 'CANCELLED'): string {
   if (status === 'PENDING') return 'Pendiente';
   if (status === 'PAID') return 'Pagada';
@@ -269,29 +274,10 @@ function transferStatusLabel(status: 'PENDING' | 'PAID' | 'DISPUTED' | 'CANCELLE
   return 'Cancelada';
 }
 
+/** Mantiene la representación visual de transferencias limitada al contrato de la API. */
 function transferStatusClass(status: 'PENDING' | 'PAID' | 'DISPUTED' | 'CANCELLED'): string {
   if (status === 'PENDING') return 'pending';
   if (status === 'PAID') return 'completed';
   return 'cancelled';
 }
 
-function GroupTabs({ groupId }: { groupId: string }) {
-  return (
-    <div className="tabs" role="tablist" aria-label="Secciones del grupo">
-      <Link role="tab" aria-selected="false" to={`/app/groups/${groupId}`}>
-        Resumen
-      </Link>
-      <Link role="tab" aria-selected="false" to={`/app/groups/${groupId}/events`}>
-        Eventos
-      </Link>
-      <Link
-        role="tab"
-        aria-selected="true"
-        className="active"
-        to={`/app/groups/${groupId}/settlements`}
-      >
-        Liquidaciones
-      </Link>
-    </div>
-  );
-}

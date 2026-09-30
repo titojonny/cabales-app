@@ -1,10 +1,12 @@
 import { Button, Modal, useOverlayState } from '@heroui/react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+/** Contenido React que se renderiza mientras ningún descendiente falla. */
 interface AppErrorBoundaryProps {
   children: ReactNode;
 }
 
+/** Estado mínimo necesario para sustituir el árbol fallido por una recuperación segura. */
 interface AppErrorBoundaryState {
   error: Error | null;
 }
@@ -31,6 +33,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 }
 
+/** Modal no descartable que ofrece recarga cuando el árbol React no puede continuar. */
 function CriticalErrorModal() {
   const state = useOverlayState({ isOpen: true });
 

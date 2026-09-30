@@ -7,7 +7,8 @@ import { StatusPanel } from './ui';
 export function ProtectedRoute() {
   const auth = useAuth();
   const location = useLocation();
-  const returnPath = `${location.pathname}${location.search}`;
+  // Conserva el fragmento: las invitaciones llevan el token en `#token=`.
+  const returnPath = `${location.pathname}${location.search}${location.hash}`;
   if (auth.isPending)
     return (
       <main className="centered">

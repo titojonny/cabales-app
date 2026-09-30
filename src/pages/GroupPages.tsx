@@ -9,7 +9,11 @@ import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { eventSchema, groupSchema, type EventValues, type GroupValues } from '../domain/validation';
 import { ErrorMessage, FieldError, Icon, StatusPanel } from '../components/ui';
-import { GroupInvitationForm } from './InvitationPage';
+import { GroupTabs } from '../components/GroupTabs';
+import { CategoryManager } from './BudgetPages';
+import { GroupInvitationForm, InvitationList } from './InvitationPage';
+
+const roleLabels = { OWNER: 'Propietario', ADMIN: 'Administrador', MEMBER: 'Miembro' } as const;
 
 /** Lista grupos reales y representa por separado carga, error y ausencia de datos. */
 export function DashboardPage() {
@@ -141,6 +145,9 @@ export function CreateGroupPage() {
 }
 
 /** Presenta el detalle del grupo con pestañas de resumen, eventos y liquidaciones. */
+/**
+ * Pestaña visible del grupo; las consultas de eventos solo se habilitan cuando corresponde.
+ */
 export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
   const { groupId = '' } = useParams();
   const { session } = useAuth();
@@ -171,27 +178,7 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
         ) : undefined
       }
     >
-      <div className="tabs" role="tablist" aria-label="Secciones del grupo">
-        <Link
-          role="tab"
-          aria-selected={tab === 'summary'}
-          className={tab === 'summary' ? 'active' : ''}
-          to={`/app/groups/${groupId}`}
-        >
-          Resumen
-        </Link>
-        <Link
-          role="tab"
-          aria-selected={tab === 'events'}
-          className={tab === 'events' ? 'active' : ''}
-          to={`/app/groups/${groupId}/events`}
-        >
-          Eventos
-        </Link>
-        <Link role="tab" aria-selected="false" to={`/app/groups/${groupId}/settlements`}>
-          Liquidaciones
-        </Link>
-      </div>
+      <GroupTabs groupId={groupId} />
       {tab === 'summary' && (
         <>
           <div className="summary-grid">
@@ -216,7 +203,7 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
                       </span>
                       <span>
                         <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
-                        <small>{member.role}</small>
+                        <small>{roleLabels[member.role]}</small>
                       </span>
                     </li>
                   ))}
@@ -227,8 +214,15 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
             </article>
           </div>
           {['OWNER', 'ADMIN'].includes(group.data.currentRole ?? '') && (
-            <GroupInvitationForm groupId={groupId} />
+            <div className="admin-grid">
+              <GroupInvitationForm groupId={groupId} />
+              <InvitationList groupId={groupId} />
+            </div>
           )}
+          <CategoryManager
+            groupId={groupId}
+            canManage={['OWNER', 'ADMIN'].includes(group.data.currentRole ?? '')}
+          />
         </>
       )}
       {tab === 'events' && (
@@ -503,16 +497,20 @@ export function CreateEventPage() {
   );
 }
 
-/** Encabezado consistente que deja la responsabilidad de datos a cada pantalla. */
+/** Encabezado de página reutilizable con acción opcional y contenido de la sección. */
 export function PageHeader({
   eyebrow,
   title,
   action,
   children,
 }: {
+  /** Texto secundario que ubica la sección actual. */
   eyebrow: string;
+  /** Título principal de la pantalla. */
   title: string;
+  /** Acción contextual, normalmente un enlace o botón autorizado. */
   action?: React.ReactNode;
+  /** Contenido específico que cada pantalla compone debajo del encabezado. */
   children: React.ReactNode;
 }) {
   return (

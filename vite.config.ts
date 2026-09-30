@@ -1,7 +1,51 @@
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * CSP como meta solo en build: en desarrollo Vite inyecta scripts inline (HMR/React Refresh).
+ * `frame-ancestors` no aplica en meta; el hosting debe enviarlo como cabecera (ver README).
+ */
+function contentSecurityPolicy(apiUrl: string | undefined): Plugin {
+  let apiOrigin = '';
+  if (apiUrl) {
+    try {
+      apiOrigin = new URL(apiUrl).origin;
+    } catch {
+      apiOrigin = '';
+    }
+  }
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ''}`,
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  return {
+    name: 'cabales-csp',
+    apply: 'build',
+    transformIndexHtml: () => [
+      {
+        tag: 'meta',
+        attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
+        injectTo: 'head-prepend',
+      },
+      {
+        tag: 'meta',
+        attrs: { name: 'referrer', content: 'strict-origin-when-cross-origin' },
+        injectTo: 'head',
+      },
+    ],
+  };
+}
 
 /** Construye el shell instalable, proxy local hacia Express y red directa para todo dato de API. */
 export default defineConfig(({ mode }) => ({
@@ -12,6 +56,7 @@ export default defineConfig(({ mode }) => ({
         }
       : undefined,
   plugins: [
+    contentSecurityPolicy(loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL),
     react(),
     tailwindcss(),
     VitePWA({

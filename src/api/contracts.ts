@@ -3,7 +3,7 @@ export interface ApiEnvelope<T> {
   success: boolean;
   data?: T;
   error?: { code: string; message: string; requestId?: string; details?: unknown };
-  meta?: { requestId?: string; idempotencyReplayed?: boolean };
+  meta?: { requestId?: string; idempotencyReplayed?: boolean; nextCursor?: string | null };
 }
 
 /** Identidad pública devuelta por autenticación y membresías. */
@@ -12,6 +12,10 @@ export interface User {
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  /** Idioma preferido; la API 1.2 lo incluye siempre. */
+  locale?: string;
+  /** `false` activa el aviso de verificación; ausente se trata como verificado. */
+  emailVerified?: boolean;
 }
 
 /** Sesión pública; cualquier respuesta auth puede incluir CSRF. */
@@ -87,6 +91,7 @@ export interface Expense {
   splitMode: 'EQUAL' | 'EXACT';
   occurredAt: string;
   createdAt: string;
+  categoryId?: string;
   participants: ExpenseParticipant[];
   payers: Array<{ id: string; eventParticipantId: string; amountCents: number }>;
   items: ExpenseItem[];
@@ -111,6 +116,7 @@ export interface ExpenseSummary {
   splitMode: 'EQUAL' | 'EXACT';
   occurredAt: string;
   createdAt: string;
+  categoryId?: string;
   participantCount: number;
   itemCount: number;
 }
@@ -157,17 +163,37 @@ export interface PaidTransfer {
   paidAt: string;
 }
 
-/** Invitación retornada junto al token visible del MVP sin correo saliente. */
+/** Invitación administrable del grupo. */
+export interface Invitation {
+  id: string;
+  groupId: string;
+  email: string;
+  role: 'ADMIN' | 'MEMBER';
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  lastSentAt: string | null;
+  sendCount: number;
+  invitedBy: { id: string; displayName: string };
+}
+
+/** Invitación creada o reenviada; `delivery` indica si salió por correo o debe compartirse. */
 export interface CreatedInvitation {
-  invitation: {
-    id: string;
-    groupId: string;
-    email: string;
-    role: 'ADMIN' | 'MEMBER';
-    status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
-    expiresAt: string;
-  };
+  invitation: Invitation;
   token: string;
+  delivery: 'email' | 'manual';
+}
+
+/** Vista previa segura antes de aceptar. */
+export interface InvitationPreview {
+  groupName: string;
+  invitedBy: string;
+  role: 'ADMIN' | 'MEMBER';
+  status: Invitation['status'];
+  expiresAt: string;
+  emailMatches: boolean;
 }
 
 /** Membresía creada o encontrada al aceptar una invitación. */
@@ -217,6 +243,7 @@ export interface CreateExpenseInput {
   currency: string;
   splitMode: 'EQUAL' | 'EXACT';
   occurredAt: string;
+  categoryId?: string;
   participants: Array<{ eventParticipantId: string; shareCents?: number }>;
   payers: Array<{ eventParticipantId: string; amountCents: number }>;
   items?: Array<{

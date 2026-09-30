@@ -173,8 +173,15 @@ describe('cabalesApi financiero', () => {
         role: 'MEMBER',
         status: 'PENDING',
         expiresAt: timestamp,
+        createdAt: timestamp,
+        acceptedAt: null,
+        revokedAt: null,
+        lastSentAt: timestamp,
+        sendCount: 1,
+        invitedBy: { id: userId, displayName: 'Ana' },
       },
       token: invitationToken,
+      delivery: 'manual',
     };
     const membership = { id: memberId, groupId, role: 'MEMBER', joinedAt: timestamp };
     const expenseList = [

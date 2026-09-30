@@ -31,6 +31,20 @@ export const loginSchema = z.object({
     .max(128, 'La contraseña no puede superar 128 caracteres.'),
 });
 
+/** Solo correo, para solicitar enlaces de verificación o recuperación. */
+export const emailOnlySchema = loginSchema.pick({ email: true });
+
+/** Nueva contraseña con confirmación; la API vuelve a aplicar la política. */
+export const resetPasswordSchema = z
+  .object({
+    password: loginSchema.shape.password,
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: 'Las contraseñas no coinciden.',
+    path: ['confirmPassword'],
+  });
+
 /** Esquema de registro; la política definitiva de contraseña también corresponde a la API. */
 export const registerSchema = loginSchema.extend({
   displayName: normalizedText(2, 120, 'El nombre'),
@@ -110,8 +124,13 @@ export const expenseSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/, 'La moneda debe ser un código ISO de tres letras.'),
   payerId: z.string().uuid('Selecciona quién pagó.'),
   splitMode: z.enum(['EQUAL', 'EXACT']),
+  categoryId: z.union([z.literal(''), z.string().uuid('Categoría inválida.')]).optional(),
 });
 
+/** Valores validados para solicitar un enlace por correo. */
+export type EmailValues = z.infer<typeof emailOnlySchema>;
+/** Valores validados al crear una nueva contraseña. */
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 /** Valores validados del inicio de sesión. */
 export type LoginValues = z.infer<typeof loginSchema>;
 /** Valores validados del registro. */

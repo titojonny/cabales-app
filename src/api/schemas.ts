@@ -14,6 +14,9 @@ const rawUserSchema = z.strictObject({
   email: z.string().email().max(320),
   displayName: z.string().min(2).max(120),
   avatarUrl: z.string().url().nullable(),
+  // Campos añadidos por la API 1.2; opcionales para tolerar respuestas anteriores.
+  locale: z.string().min(2).max(10).optional(),
+  emailVerified: z.boolean().optional(),
 });
 
 const rawGroupMemberUserSchema = z.strictObject({
@@ -97,17 +100,42 @@ export const groupDetailSchema = z
     memberCount: group.members.length,
   }));
 
-/** Valida el token e invitación que el MVP entrega directamente al creador. */
+const invitationStatus = z.enum(['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED']);
+
+/** Invitación administrable: estado, reenvíos y quién la creó; nunca incluye el hash del token. */
+export const invitationSchema = z.strictObject({
+  id,
+  groupId: id,
+  email: z.string().email().max(320),
+  role: z.enum(['ADMIN', 'MEMBER']),
+  status: invitationStatus,
+  expiresAt: date,
+  createdAt: date,
+  acceptedAt: date.nullable(),
+  revokedAt: date.nullable(),
+  lastSentAt: date.nullable(),
+  sendCount: z.number().int().nonnegative(),
+  invitedBy: z.strictObject({ id, displayName: z.string() }),
+});
+
+/** Lista administrativa de invitaciones del grupo. */
+export const invitationListSchema = z.array(invitationSchema);
+
+/** Invitación creada o reenviada: el token se muestra una sola vez para compartirlo. */
 export const createdInvitationSchema = z.strictObject({
-  invitation: z.strictObject({
-    id,
-    groupId: id,
-    email: z.string().email().max(320),
-    role: z.enum(['ADMIN', 'MEMBER']),
-    status: z.enum(['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED']),
-    expiresAt: date,
-  }),
+  invitation: invitationSchema,
   token: z.string().min(20).max(200),
+  delivery: z.enum(['email', 'manual']),
+});
+
+/** Vista previa de una invitación sin aceptarla; no expone el correo invitado. */
+export const invitationPreviewSchema = z.strictObject({
+  groupName: z.string(),
+  invitedBy: z.string(),
+  role: z.enum(['ADMIN', 'MEMBER']),
+  status: invitationStatus,
+  expiresAt: date,
+  emailMatches: z.boolean(),
 });
 
 /** Valida la membresía resultante de aceptar una invitación. */
@@ -241,6 +269,7 @@ export const expenseListSchema = z
       splitMode: z.enum(['EQUAL', 'EXACT']),
       occurredAt: date,
       createdAt: date,
+      categoryId: id.nullable().optional(),
       _count: z.strictObject({
         participants: z.number().int().nonnegative(),
         items: z.number().int().nonnegative(),
@@ -257,6 +286,7 @@ export const expenseListSchema = z
       splitMode: expense.splitMode,
       occurredAt: expense.occurredAt,
       createdAt: expense.createdAt,
+      categoryId: expense.categoryId ?? undefined,
       participantCount: expense._count.participants,
       itemCount: expense._count.items,
     })),
@@ -275,6 +305,7 @@ export const expenseDetailSchema = z
     splitMode: z.enum(['EQUAL', 'EXACT']),
     occurredAt: date,
     createdAt: date,
+    categoryId: id.nullable().optional(),
     participants: z.array(rawExpenseParticipant),
     payers: z.array(
       z.strictObject({
@@ -309,6 +340,7 @@ export const expenseDetailSchema = z
     splitMode: expense.splitMode,
     occurredAt: expense.occurredAt,
     createdAt: expense.createdAt,
+    categoryId: expense.categoryId ?? undefined,
     participants: expense.participants.map((participant) => ({
       ...participant,
       eventParticipant: {

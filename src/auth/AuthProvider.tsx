@@ -5,6 +5,7 @@ import type { Session } from '../api/contracts';
 import { clearCsrfToken, HttpError, onUnauthorized } from '../api/http';
 import { queries, queryKeys } from '../api/queries';
 
+/** Estado público de sesión y acciones disponibles para las rutas y el shell. */
 interface AuthState {
   session?: Session;
   isPending: boolean;
@@ -18,6 +19,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 /** Sincroniza la cookie de sesión con Query sin persistir secretos en el navegador. */
+/** Provee la sesión remota y centraliza invalidación, logout y recuperación ante 401. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const sessionQuery = useQuery(queries.session());

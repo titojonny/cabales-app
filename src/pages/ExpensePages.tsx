@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import type { CreateExpenseInput } from '../api/contracts';
+import { moduleQueries } from '../api/module-queries';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { ErrorMessage, FieldError, StatusPanel } from '../components/ui';
@@ -18,6 +19,7 @@ import {
 import { expenseSchema, type ExpenseValues } from '../domain/validation';
 import { PageHeader } from './GroupPages';
 
+/** Clave y payload conservados durante un intento para repetirlo de forma idempotente. */
 interface ExpenseAttempt {
   input: CreateExpenseInput;
   idempotencyKey: string;
@@ -30,6 +32,7 @@ export function CreateExpensePage() {
   const queryClient = useQueryClient();
   const group = useQuery(queries.group(groupId, session?.user.id ?? ''));
   const event = useQuery(queries.event(groupId, eventId));
+  const categories = useQuery(moduleQueries.categories(groupId));
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string[]>([]);
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
@@ -43,6 +46,7 @@ export function CreateExpensePage() {
       currency: 'USD',
       payerId: '',
       splitMode: 'EQUAL',
+      categoryId: '',
     },
   });
   const splitMode = form.watch('splitMode');
@@ -114,6 +118,7 @@ export function CreateExpensePage() {
       eventId,
       title: values.title,
       ...(values.notes ? { notes: values.notes } : {}),
+      ...(values.categoryId ? { categoryId: values.categoryId } : {}),
       totalCents: total,
       currency: values.currency,
       splitMode: values.splitMode,
@@ -166,6 +171,21 @@ export function CreateExpensePage() {
                 </select>
               </div>
             </div>
+            {categories.data && categories.data.length > 0 && (
+              <>
+                <label htmlFor="expense-category">
+                  Categoría <span className="optional">Opcional</span>
+                </label>
+                <select id="expense-category" {...form.register('categoryId')}>
+                  <option value="">Sin categoría</option>
+                  {categories.data.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             <label htmlFor="payer">Pagó el total</label>
             <select id="payer" aria-describedby="payer-error" {...form.register('payerId')}>
               <option value="">Selecciona una persona</option>

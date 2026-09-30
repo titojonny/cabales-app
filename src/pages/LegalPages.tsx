@@ -60,6 +60,7 @@ export function PrivacyPage() {
   );
 }
 
+/** Presenta los términos base del servicio y señala la revisión jurídica pendiente. */
 export function TermsPage() {
   return (
     <main className="legal-page">

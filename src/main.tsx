@@ -10,6 +10,7 @@ import { NetworkStatus } from './components/NetworkStatus';
 import './styles.css';
 
 /** Reintenta consultas una vez; mutaciones no reintentan salvo flujos financieros idempotentes. */
+/** Cliente compartido que conserva consultas remotas sin persistir datos privados. */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 20_000, refetchOnWindowFocus: false },
@@ -17,6 +18,7 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Punto de montaje único de la aplicación; falla explícitamente si falta el shell HTML. */
 const root = document.getElementById('root');
 if (!root) throw new Error('No se encontró el contenedor principal de Cabales.');
 

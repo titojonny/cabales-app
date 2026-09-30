@@ -1,18 +1,25 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@heroui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, MailCheck, ShieldCheck } from 'lucide-react';
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
+import type { Session } from '../api/contracts';
+import { clearCsrfToken } from '../api/http';
+import { modulesApi } from '../api/modules-api';
 import { queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import {
+  emailOnlySchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
+  type EmailValues,
   type LoginValues,
   type RegisterValues,
+  type ResetPasswordValues,
 } from '../domain/validation';
 import { ErrorMessage, FieldError, Icon } from '../components/ui';
 
@@ -124,6 +131,7 @@ export function LoginPage() {
           type="email"
           autoComplete="email"
           aria-describedby="email-error"
+          aria-invalid={Boolean(form.formState.errors.email)}
           {...form.register('email')}
         />
         <FieldError id="email-error" message={form.formState.errors.email?.message} />
@@ -188,6 +196,7 @@ export function RegisterPage() {
           id="display-name"
           autoComplete="name"
           aria-describedby="display-name-error"
+          aria-invalid={Boolean(form.formState.errors.displayName)}
           {...form.register('displayName')}
         />
         <FieldError id="display-name-error" message={form.formState.errors.displayName?.message} />
@@ -197,6 +206,7 @@ export function RegisterPage() {
           type="email"
           autoComplete="email"
           aria-describedby="email-error"
+          aria-invalid={Boolean(form.formState.errors.email)}
           {...form.register('email')}
         />
         <FieldError id="email-error" message={form.formState.errors.email?.message} />
@@ -236,21 +246,16 @@ export function RegisterPage() {
   );
 }
 
-/** Pantalla de recuperación preparada para el endpoint de correo del backend. */
+/** Solicita el enlace de recuperación; la respuesta es idéntica exista o no la cuenta. */
 export function ForgotPasswordPage() {
-  const token = window.location.hash.startsWith('#token=')
-    ? window.location.hash.slice('#token='.length)
-    : '';
-  const [sent, setSent] = useState(false);
-  const request = useForm<{ email: string }>({ defaultValues: { email: '' } });
-  const reset = useForm<{ password: string }>({ defaultValues: { password: '' } });
-  const requestMutation = useMutation({
-    mutationFn: (values: { email: string }) => cabalesApi.requestPasswordRecovery(values.email),
-    onSuccess: () => setSent(true),
+  const [sentTo, setSentTo] = useState<string>();
+  const form = useForm<EmailValues>({
+    resolver: zodResolver(emailOnlySchema),
+    defaultValues: { email: '' },
   });
-  const resetMutation = useMutation({
-    mutationFn: (values: { password: string }) => cabalesApi.resetPassword(token, values.password),
-    onSuccess: () => setSent(true),
+  const mutation = useMutation({
+    mutationFn: (values: EmailValues) => modulesApi.requestPasswordRecovery(values.email),
+    onSuccess: (_data, values) => setSentTo(values.email),
   });
   return (
     <AuthFrame
@@ -262,56 +267,199 @@ export function ForgotPasswordPage() {
         </span>
       }
     >
-      <div className="recovery-placeholder">
-        <div className="recovery-icon" aria-hidden="true">
-          <ShieldCheck size={24} />
-        </div>
-        <h2>Recuperación por correo</h2>
-        {sent ? (
-          <>
-            <p>Si la cuenta existe, recibirás instrucciones en tu correo. Revisa también spam.</p>
-            <Link className="button primary full-width" to="/login">
+      {sentTo ? (
+        <div className="auth-result" role="status">
+          <div className="recovery-icon" aria-hidden="true">
+            <MailCheck size={24} />
+          </div>
+          <h2>Revisa tu correo</h2>
+          <p>
+            Si <strong>{sentTo}</strong> tiene una cuenta, recibirás un enlace para crear una nueva
+            contraseña. Caduca pronto y solo funciona una vez; revisa también la carpeta de spam.
+          </p>
+          <div className="button-row">
+            <Link className="button primary" to="/login">
               Volver al acceso
             </Link>
-          </>
-        ) : token ? (
-          <form onSubmit={reset.handleSubmit((values) => resetMutation.mutate(values))} noValidate>
-            <label htmlFor="new-password">Nueva contraseña</label>
-            <input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={12}
-              {...reset.register('password', { required: true, minLength: 12 })}
-            />
-            {resetMutation.isError && <ErrorMessage error={resetMutation.error} />}
-            <Button variant="primary" fullWidth type="submit" isDisabled={resetMutation.isPending}>
-              {resetMutation.isPending ? 'Guardando…' : 'Cambiar contraseña'}
-            </Button>
-          </form>
-        ) : (
-          <form
-            onSubmit={request.handleSubmit((values) => requestMutation.mutate(values))}
-            noValidate
-          >
-            <p>Te enviaremos un enlace seguro si el correo está registrado.</p>
-            <label htmlFor="recovery-email">Correo</label>
-            <input
-              id="recovery-email"
-              type="email"
-              autoComplete="email"
-              {...request.register('email', { required: true })}
-            />
-            {requestMutation.isError && <ErrorMessage error={requestMutation.error} />}
             <Button
-              variant="primary"
-              fullWidth
-              type="submit"
-              isDisabled={requestMutation.isPending}
+              variant="tertiary"
+              type="button"
+              isDisabled={mutation.isPending}
+              onPress={() => mutation.mutate({ email: sentTo })}
             >
-              {requestMutation.isPending ? 'Enviando…' : 'Enviar enlace'}
+              {mutation.isPending ? 'Reenviando…' : 'Reenviar enlace'}
             </Button>
-          </form>
+          </div>
+          {mutation.isError && <ErrorMessage error={mutation.error} />}
+        </div>
+      ) : (
+        <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} noValidate>
+          <p className="muted">Te enviaremos un enlace seguro si el correo está registrado.</p>
+          <label htmlFor="recovery-email">Correo</label>
+          <input
+            id="recovery-email"
+            type="email"
+            autoComplete="email"
+            aria-describedby="recovery-email-error"
+            aria-invalid={Boolean(form.formState.errors.email)}
+            {...form.register('email')}
+          />
+          <FieldError id="recovery-email-error" message={form.formState.errors.email?.message} />
+          {mutation.isError && <ErrorMessage error={mutation.error} />}
+          <Button variant="primary" fullWidth type="submit" isDisabled={mutation.isPending}>
+            {mutation.isPending ? 'Enviando…' : 'Enviar enlace'}
+          </Button>
+        </form>
+      )}
+    </AuthFrame>
+  );
+}
+
+/**
+ * Lee el token del fragmento `#token=` una sola vez y lo elimina de la barra y del historial:
+ * el fragmento nunca viaja al servidor ni en Referer, y así tampoco queda en el navegador.
+ */
+function useHashToken(): string {
+  const [token] = useState(() => {
+    const value = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token') ?? '';
+    if (value) window.history.replaceState(window.history.state, '', window.location.pathname);
+    return /^[A-Za-z0-9_-]{32,256}$/.test(value) ? value : '';
+  });
+  return token;
+}
+
+/** Crea una nueva contraseña con el enlace recibido; revoca todas las sesiones abiertas. */
+export function ResetPasswordPage() {
+  const token = useHashToken();
+  const queryClient = useQueryClient();
+  const form = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
+  const mutation = useMutation({
+    mutationFn: (values: ResetPasswordValues) => modulesApi.resetPassword(token, values.password),
+    onSuccess: () => {
+      // La API revocó todas las sesiones y limpió las cookies de este navegador.
+      clearCsrfToken();
+      queryClient.clear();
+    },
+  });
+  return (
+    <AuthFrame
+      eyebrow="Nueva contraseña"
+      title="Protege tu cuenta"
+      alternate={
+        <span>
+          ¿Necesitas otro enlace? <Link to="/forgot-password">Solicítalo aquí</Link>
+        </span>
+      }
+    >
+      {!token ? (
+        <div className="auth-result" role="status">
+          <h2>Enlace no válido</h2>
+          <p>El enlace está incompleto o ya se usó. Solicita uno nuevo para continuar.</p>
+          <Link className="button primary" to="/forgot-password">
+            Solicitar enlace
+          </Link>
+        </div>
+      ) : mutation.isSuccess ? (
+        <div className="auth-result" role="status">
+          <div className="recovery-icon" aria-hidden="true">
+            <ShieldCheck size={24} />
+          </div>
+          <h2>Contraseña actualizada</h2>
+          <p>Por seguridad cerramos todas tus sesiones. Inicia sesión con tu nueva contraseña.</p>
+          <Link className="button primary" to="/login">
+            Iniciar sesión
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} noValidate>
+          <label htmlFor="new-password">Nueva contraseña</label>
+          <PasswordField
+            id="new-password"
+            autoComplete="new-password"
+            ariaDescribedBy="new-password-error new-password-help"
+            registration={form.register('password')}
+          />
+          <small id="new-password-help">Usa al menos 12 caracteres.</small>
+          <FieldError id="new-password-error" message={form.formState.errors.password?.message} />
+          <label htmlFor="confirm-password">Confirmar contraseña</label>
+          <PasswordField
+            id="confirm-password"
+            autoComplete="new-password"
+            ariaDescribedBy="confirm-password-error"
+            registration={form.register('confirmPassword')}
+          />
+          <FieldError
+            id="confirm-password-error"
+            message={form.formState.errors.confirmPassword?.message}
+          />
+          {mutation.isError && <ErrorMessage error={mutation.error} />}
+          <Button variant="primary" fullWidth type="submit" isDisabled={mutation.isPending}>
+            {mutation.isPending ? 'Guardando…' : 'Cambiar contraseña'}
+          </Button>
+        </form>
+      )}
+    </AuthFrame>
+  );
+}
+
+/** Confirma el correo con el enlace recibido; funciona con o sin sesión abierta. */
+export function VerifyEmailPage() {
+  const token = useHashToken();
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+  const started = useRef(false);
+  const mutation = useMutation({
+    mutationFn: () => modulesApi.verifyEmail(token),
+    onSuccess: (user) => {
+      const session = queryClient.getQueryData<Session>(queryKeys.session);
+      if (session && session.user.id === user.id)
+        queryClient.setQueryData<Session>(queryKeys.session, { ...session, user });
+    },
+  });
+  useEffect(() => {
+    // El token es de un solo uso: evita el doble envío del modo estricto de React.
+    if (!token || started.current) return;
+    started.current = true;
+    mutation.mutate();
+  }, [mutation, token]);
+  const next = auth.session ? '/app' : '/login';
+  return (
+    <AuthFrame
+      eyebrow="Verificación"
+      title="Confirma tu correo"
+      alternate={<Link to={next}>{auth.session ? 'Ir a mi espacio' : 'Iniciar sesión'}</Link>}
+    >
+      <div className="auth-result" role="status" aria-live="polite">
+        {!token ? (
+          <>
+            <h2>Enlace no válido</h2>
+            <p>
+              El enlace está incompleto. Desde tu espacio puedes pedir uno nuevo con «Reenviar
+              enlace».
+            </p>
+          </>
+        ) : mutation.isPending || mutation.isIdle ? (
+          <p aria-busy="true">Confirmando tu correo…</p>
+        ) : mutation.isSuccess ? (
+          <>
+            <div className="recovery-icon" aria-hidden="true">
+              <MailCheck size={24} />
+            </div>
+            <h2>Correo verificado</h2>
+            <p>Gracias. Ya puedes recibir invitaciones y avisos en {mutation.data.email}.</p>
+            <Link className="button primary" to={next}>
+              Continuar
+            </Link>
+          </>
+        ) : (
+          <>
+            <h2>No pudimos verificar el correo</h2>
+            <ErrorMessage error={mutation.error} />
+            <p>El enlace pudo caducar o ya se usó. Solicita otro desde tu espacio.</p>
+          </>
         )}
       </div>
     </AuthFrame>

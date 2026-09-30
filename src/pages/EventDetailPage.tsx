@@ -113,6 +113,7 @@ export function EventDetailPage() {
   );
 }
 
+/** Traduce estados persistidos a etiquetas de interfaz sin alterar el valor del contrato. */
 function eventStatusLabel(status: 'OPEN' | 'CLOSED' | 'CANCELLED'): string {
   if (status === 'OPEN') return 'Evento abierto';
   if (status === 'CLOSED') return 'Evento cerrado';

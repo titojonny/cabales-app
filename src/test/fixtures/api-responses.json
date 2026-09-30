@@ -1,0 +1,1087 @@
+{
+  "register": {
+    "user": {
+      "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+      "email": "a@example.com",
+      "displayName": "Ana",
+      "avatarUrl": null,
+      "locale": "es",
+      "emailVerified": false
+    },
+    "csrfToken": "RXRAyHWnwkVFrq_kKwhlH5rarAHes8JadCLupTUr-K8"
+  },
+  "group": {
+    "id": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "G1",
+    "description": null,
+    "currency": "USD",
+    "createdAt": "2026-09-26T18:28:51.156Z",
+    "updatedAt": "2026-09-26T18:28:51.156Z"
+  },
+  "invite": {
+    "invitation": {
+      "id": "3f59a4d1-9700-41b9-9cd0-3c6ed789d74c",
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "email": "b@example.com",
+      "role": "MEMBER",
+      "status": "PENDING",
+      "expiresAt": "2026-10-03T18:28:51.197Z",
+      "createdAt": "2026-09-26T18:28:51.199Z",
+      "acceptedAt": null,
+      "revokedAt": null,
+      "lastSentAt": "2026-09-26T18:28:51.198Z",
+      "sendCount": 1,
+      "invitedBy": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      }
+    },
+    "token": "token-de-prueba-no-real",
+    "delivery": "email"
+  },
+  "invitations": [
+    {
+      "id": "3f59a4d1-9700-41b9-9cd0-3c6ed789d74c",
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "email": "b@example.com",
+      "role": "MEMBER",
+      "status": "PENDING",
+      "expiresAt": "2026-10-03T18:28:51.197Z",
+      "createdAt": "2026-09-26T18:28:51.199Z",
+      "acceptedAt": null,
+      "revokedAt": null,
+      "lastSentAt": "2026-09-26T18:28:51.198Z",
+      "sendCount": 1,
+      "invitedBy": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      }
+    }
+  ],
+  "preview": {
+    "groupName": "G1",
+    "invitedBy": "Ana",
+    "role": "MEMBER",
+    "status": "PENDING",
+    "expiresAt": "2026-10-03T18:28:51.197Z",
+    "emailMatches": true
+  },
+  "accept": {
+    "id": "9263760c-d7be-4536-a739-799004773cbb",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "role": "MEMBER",
+    "joinedAt": "2026-09-26T18:28:51.237Z"
+  },
+  "groupDetail": {
+    "id": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "G1",
+    "description": null,
+    "currency": "USD",
+    "createdAt": "2026-09-26T18:28:51.156Z",
+    "updatedAt": "2026-09-26T18:28:51.156Z",
+    "members": [
+      {
+        "id": "6cb2496e-e5d0-4c38-a109-817ae0254512",
+        "role": "OWNER",
+        "joinedAt": "2026-09-26T18:28:51.156Z",
+        "user": {
+          "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+          "displayName": "Ana",
+          "avatarUrl": null
+        }
+      },
+      {
+        "id": "9263760c-d7be-4536-a739-799004773cbb",
+        "role": "MEMBER",
+        "joinedAt": "2026-09-26T18:28:51.237Z",
+        "user": {
+          "id": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+          "displayName": "Bob",
+          "avatarUrl": null
+        }
+      }
+    ]
+  },
+  "category": {
+    "id": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Comida",
+    "color": null
+  },
+  "categories": [
+    {
+      "id": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "name": "Comida",
+      "color": null
+    }
+  ],
+  "event": {
+    "id": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Evento",
+    "description": null,
+    "startsAt": "2026-09-26T18:28:51.263Z",
+    "status": "OPEN",
+    "createdAt": "2026-09-26T18:28:51.270Z",
+    "participants": [
+      {
+        "id": "11f6c76f-0074-406f-809f-57d7323ecd83",
+        "groupMemberId": "6cb2496e-e5d0-4c38-a109-817ae0254512",
+        "guestName": null
+      },
+      {
+        "id": "90cf4c77-7c14-43e8-a9ba-625cf3653705",
+        "groupMemberId": "9263760c-d7be-4536-a739-799004773cbb",
+        "guestName": null
+      }
+    ]
+  },
+  "budget": {
+    "id": "fbda55a0-5021-4ce9-bf6d-fd993dec0a13",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Mes",
+    "amountCents": 1000,
+    "currency": "USD",
+    "period": "MONTHLY",
+    "startsAt": "2026-01-01T00:00:00.000Z",
+    "endsAt": null,
+    "alertThresholdPercent": 80,
+    "createdAt": "2026-09-26T18:28:51.285Z",
+    "updatedAt": "2026-09-26T18:28:51.285Z",
+    "category": {
+      "id": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+      "name": "Comida",
+      "color": null
+    },
+    "current": {
+      "periodStart": "2026-09-01T00:00:00.000Z",
+      "periodEnd": "2026-10-01T00:00:00.000Z",
+      "periodState": "ACTIVE",
+      "spentCents": 0,
+      "expenseCount": 0,
+      "remainingCents": 1000,
+      "overspentCents": 0,
+      "progressPercent": 0,
+      "alert": "OK"
+    }
+  },
+  "expense": {
+    "id": "4d98bffa-2eb6-4bdd-8a49-b8dafc8134ea",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+    "title": "T",
+    "notes": null,
+    "totalCents": 900,
+    "currency": "USD",
+    "splitMode": "EQUAL",
+    "occurredAt": "2026-09-26T18:28:51.290Z",
+    "createdAt": "2026-09-26T18:28:51.314Z",
+    "categoryId": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+    "participants": [
+      {
+        "id": "8c139107-229a-41b8-a66d-bef2a264089b",
+        "eventParticipantId": "11f6c76f-0074-406f-809f-57d7323ecd83",
+        "shareCents": 450,
+        "eventParticipant": {
+          "guestName": null,
+          "groupMemberId": "6cb2496e-e5d0-4c38-a109-817ae0254512"
+        }
+      },
+      {
+        "id": "be334c0c-e81a-459e-ae5f-5151acbbc0b7",
+        "eventParticipantId": "90cf4c77-7c14-43e8-a9ba-625cf3653705",
+        "shareCents": 450,
+        "eventParticipant": {
+          "guestName": null,
+          "groupMemberId": "9263760c-d7be-4536-a739-799004773cbb"
+        }
+      }
+    ],
+    "payers": [
+      {
+        "id": "75740a50-10e0-45a0-b8c9-3ad5d261f0b5",
+        "amountCents": 900,
+        "expenseParticipant": {
+          "eventParticipantId": "11f6c76f-0074-406f-809f-57d7323ecd83"
+        }
+      }
+    ],
+    "items": []
+  },
+  "budgetDetail": {
+    "id": "fbda55a0-5021-4ce9-bf6d-fd993dec0a13",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Mes",
+    "amountCents": 1000,
+    "currency": "USD",
+    "period": "MONTHLY",
+    "startsAt": "2026-01-01T00:00:00.000Z",
+    "endsAt": null,
+    "alertThresholdPercent": 80,
+    "createdAt": "2026-09-26T18:28:51.285Z",
+    "updatedAt": "2026-09-26T18:28:51.285Z",
+    "category": {
+      "id": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+      "name": "Comida",
+      "color": null
+    },
+    "current": {
+      "periodStart": "2026-09-01T00:00:00.000Z",
+      "periodEnd": "2026-10-01T00:00:00.000Z",
+      "periodState": "ACTIVE",
+      "spentCents": 900,
+      "expenseCount": 1,
+      "remainingCents": 100,
+      "overspentCents": 0,
+      "progressPercent": 90,
+      "alert": "WARNING"
+    },
+    "history": [
+      {
+        "periodStart": "2026-04-01T00:00:00.000Z",
+        "periodEnd": "2026-05-01T00:00:00.000Z",
+        "spentCents": 0,
+        "expenseCount": 0
+      },
+      {
+        "periodStart": "2026-05-01T00:00:00.000Z",
+        "periodEnd": "2026-06-01T00:00:00.000Z",
+        "spentCents": 0,
+        "expenseCount": 0
+      },
+      {
+        "periodStart": "2026-06-01T00:00:00.000Z",
+        "periodEnd": "2026-07-01T00:00:00.000Z",
+        "spentCents": 0,
+        "expenseCount": 0
+      },
+      {
+        "periodStart": "2026-07-01T00:00:00.000Z",
+        "periodEnd": "2026-08-01T00:00:00.000Z",
+        "spentCents": 0,
+        "expenseCount": 0
+      },
+      {
+        "periodStart": "2026-08-01T00:00:00.000Z",
+        "periodEnd": "2026-09-01T00:00:00.000Z",
+        "spentCents": 0,
+        "expenseCount": 0
+      },
+      {
+        "periodStart": "2026-09-01T00:00:00.000Z",
+        "periodEnd": "2026-10-01T00:00:00.000Z",
+        "spentCents": 900,
+        "expenseCount": 1
+      }
+    ]
+  },
+  "cabudasOpen": {
+    "totals": [],
+    "groups": [],
+    "people": [],
+    "simplifiedTransfers": [],
+    "pendingTransfers": [],
+    "openEvents": [
+      {
+        "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+        "eventName": "Evento",
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "groupName": "G1",
+        "currency": "USD",
+        "myNetCents": 450
+      }
+    ]
+  },
+  "settlement": {
+    "id": "b7127105-138f-4351-9d5f-06dd4b1bade0",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+    "status": "OPEN",
+    "currency": "USD",
+    "createdAt": "2026-09-26T18:28:51.384Z",
+    "completedAt": null,
+    "transfers": [
+      {
+        "id": "ef7c646e-739d-427e-b394-d0b0654d8c04",
+        "debtorParticipantId": "90cf4c77-7c14-43e8-a9ba-625cf3653705",
+        "creditorParticipantId": "11f6c76f-0074-406f-809f-57d7323ecd83",
+        "amountCents": 450,
+        "status": "PENDING",
+        "paidAt": null,
+        "debtor": {
+          "guestName": null,
+          "groupMemberId": "9263760c-d7be-4536-a739-799004773cbb"
+        },
+        "creditor": {
+          "guestName": null,
+          "groupMemberId": "6cb2496e-e5d0-4c38-a109-817ae0254512"
+        },
+        "history": [
+          {
+            "fromStatus": null,
+            "toStatus": "PENDING",
+            "createdAt": "2026-09-26T18:28:51.384Z"
+          }
+        ]
+      }
+    ]
+  },
+  "cabudas": {
+    "totals": [
+      {
+        "currency": "USD",
+        "owedToMeCents": 0,
+        "iOweCents": 450,
+        "netCents": -450
+      }
+    ],
+    "groups": [
+      {
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "groupName": "G1",
+        "currency": "USD",
+        "owedToMeCents": 0,
+        "iOweCents": 450,
+        "netCents": -450
+      }
+    ],
+    "people": [
+      {
+        "counterparty": {
+          "userId": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+          "displayName": "Ana",
+          "isGuest": false
+        },
+        "groupId": null,
+        "currency": "USD",
+        "netCents": -450
+      }
+    ],
+    "simplifiedTransfers": [
+      {
+        "direction": "PAY",
+        "counterparty": {
+          "userId": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+          "displayName": "Ana",
+          "isGuest": false
+        },
+        "groupId": null,
+        "currency": "USD",
+        "amountCents": 450
+      }
+    ],
+    "pendingTransfers": [
+      {
+        "transferId": "ef7c646e-739d-427e-b394-d0b0654d8c04",
+        "settlementId": "b7127105-138f-4351-9d5f-06dd4b1bade0",
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "groupName": "G1",
+        "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+        "eventName": "Evento",
+        "direction": "PAY",
+        "counterparty": {
+          "userId": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+          "displayName": "Ana",
+          "isGuest": false
+        },
+        "amountCents": 450,
+        "currency": "USD",
+        "status": "PENDING",
+        "paidAt": null,
+        "createdAt": "2026-09-26T18:28:51.384Z"
+      }
+    ],
+    "openEvents": []
+  },
+  "cabudasHistory": [
+    {
+      "transferId": "ef7c646e-739d-427e-b394-d0b0654d8c04",
+      "settlementId": "b7127105-138f-4351-9d5f-06dd4b1bade0",
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "groupName": "G1",
+      "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+      "eventName": "Evento",
+      "direction": "PAY",
+      "counterparty": {
+        "userId": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana",
+        "isGuest": false
+      },
+      "amountCents": 450,
+      "currency": "USD",
+      "status": "PENDING",
+      "paidAt": null,
+      "createdAt": "2026-09-26T18:28:51.384Z"
+    }
+  ],
+  "stats": {
+    "range": {
+      "from": "2026-06-28T18:28:51.422Z",
+      "to": "2026-09-26T18:28:51.422Z"
+    },
+    "currency": "USD",
+    "availableCurrencies": ["USD"],
+    "granularity": "month",
+    "totals": {
+      "spentCents": 900,
+      "expenseCount": 1,
+      "myShareCents": 450,
+      "myPaidCents": 900,
+      "averageExpenseCents": 900
+    },
+    "byCategory": [
+      {
+        "categoryId": "e8dbb5d3-f7cb-4b4c-a796-a559ea9a5d9b",
+        "name": "Comida",
+        "color": null,
+        "totalCents": 900,
+        "count": 1
+      }
+    ],
+    "byGroup": [
+      {
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "name": "G1",
+        "totalCents": 900,
+        "count": 1
+      }
+    ],
+    "byEvent": [
+      {
+        "eventId": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+        "name": "Evento",
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "totalCents": 900,
+        "count": 1
+      }
+    ],
+    "byPerson": [
+      {
+        "userId": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana",
+        "paidCents": 900,
+        "shareCents": 450
+      },
+      {
+        "userId": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+        "displayName": "Bob",
+        "paidCents": 0,
+        "shareCents": 450
+      }
+    ],
+    "trend": [
+      {
+        "period": "2026-09",
+        "totalCents": 900,
+        "myShareCents": 450
+      }
+    ],
+    "budgets": [
+      {
+        "budgetId": "fbda55a0-5021-4ce9-bf6d-fd993dec0a13",
+        "name": "Mes",
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "amountCents": 1000,
+        "spentCents": 900,
+        "progressPercent": 90,
+        "alert": "WARNING",
+        "periodStart": "2026-09-01T00:00:00.000Z",
+        "periodEnd": "2026-10-01T00:00:00.000Z"
+      }
+    ]
+  },
+  "fund": {
+    "id": "b2955590-a4d7-4a88-a41c-3882c0b47e9b",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Caja",
+    "description": null,
+    "currency": "USD",
+    "archivedAt": null,
+    "createdAt": "2026-09-26T18:28:51.439Z",
+    "updatedAt": "2026-09-26T18:28:51.439Z",
+    "balanceCents": 0,
+    "myRole": "MANAGER",
+    "canManage": true
+  },
+  "movement": {
+    "movement": {
+      "id": "ed1160fb-f37b-4cbc-87d3-a13ab9230421",
+      "type": "CONTRIBUTION",
+      "amountCents": 500,
+      "description": null,
+      "createdAt": "2026-09-26T18:28:51.453Z",
+      "createdBy": {
+        "id": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+        "displayName": "Bob"
+      }
+    },
+    "balanceCents": 500
+  },
+  "funds": [
+    {
+      "id": "b2955590-a4d7-4a88-a41c-3882c0b47e9b",
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "name": "Caja",
+      "description": null,
+      "currency": "USD",
+      "archivedAt": null,
+      "createdAt": "2026-09-26T18:28:51.439Z",
+      "updatedAt": "2026-09-26T18:28:51.439Z",
+      "balanceCents": 500,
+      "memberCount": 2,
+      "movementCount": 1,
+      "myRole": "MANAGER",
+      "canManage": true
+    }
+  ],
+  "fundDetail": {
+    "id": "b2955590-a4d7-4a88-a41c-3882c0b47e9b",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Caja",
+    "description": null,
+    "currency": "USD",
+    "archivedAt": null,
+    "createdAt": "2026-09-26T18:28:51.439Z",
+    "updatedAt": "2026-09-26T18:28:51.439Z",
+    "balanceCents": 500,
+    "myRole": "MANAGER",
+    "canManage": true,
+    "canContribute": true,
+    "totals": {
+      "CONTRIBUTION": {
+        "totalCents": 500,
+        "count": 1
+      },
+      "WITHDRAWAL": {
+        "totalCents": 0,
+        "count": 0
+      },
+      "ADJUSTMENT": {
+        "totalCents": 0,
+        "count": 0
+      }
+    },
+    "members": [
+      {
+        "id": "90919a4b-f43f-4624-92d4-0d3719cf5c7f",
+        "role": "MANAGER",
+        "joinedAt": "2026-09-26T18:28:51.439Z",
+        "groupMemberId": "6cb2496e-e5d0-4c38-a109-817ae0254512",
+        "user": {
+          "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+          "displayName": "Ana",
+          "avatarUrl": null
+        }
+      },
+      {
+        "id": "d11e8be2-b732-4b10-a3fa-e0090ccaec95",
+        "role": "MEMBER",
+        "joinedAt": "2026-09-26T18:28:51.439Z",
+        "groupMemberId": "9263760c-d7be-4536-a739-799004773cbb",
+        "user": {
+          "id": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+          "displayName": "Bob",
+          "avatarUrl": null
+        }
+      }
+    ]
+  },
+  "movements": [
+    {
+      "id": "ed1160fb-f37b-4cbc-87d3-a13ab9230421",
+      "type": "CONTRIBUTION",
+      "amountCents": 500,
+      "description": null,
+      "createdAt": "2026-09-26T18:28:51.453Z",
+      "createdBy": {
+        "id": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+        "displayName": "Bob"
+      }
+    }
+  ],
+  "document": {
+    "id": "47ab24e3-d8e1-48dc-a280-371d4515cbd1",
+    "name": "r.png",
+    "mimeType": "image/png",
+    "sizeBytes": 70,
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "eventId": null,
+    "expenseId": null,
+    "settlementId": null,
+    "createdAt": "2026-09-26T18:28:51.487Z",
+    "updatedAt": "2026-09-26T18:28:51.487Z",
+    "owner": {
+      "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+      "displayName": "Ana"
+    },
+    "access": "MANAGE"
+  },
+  "documents": [
+    {
+      "id": "47ab24e3-d8e1-48dc-a280-371d4515cbd1",
+      "name": "r.png",
+      "mimeType": "image/png",
+      "sizeBytes": 70,
+      "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+      "eventId": null,
+      "expenseId": null,
+      "settlementId": null,
+      "createdAt": "2026-09-26T18:28:51.487Z",
+      "updatedAt": "2026-09-26T18:28:51.487Z",
+      "owner": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      },
+      "access": "MANAGE"
+    }
+  ],
+  "downloadUrl": {
+    "url": "http://api.test/api/v1/storage/local/firma-de-prueba",
+    "expiresAt": "2026-09-26T18:33:51.503Z"
+  },
+  "grant": {
+    "userId": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+    "displayName": "Bob",
+    "access": "VIEW",
+    "createdAt": "2026-09-26T18:28:51.513Z"
+  },
+  "grants": [
+    {
+      "userId": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+      "displayName": "Bob",
+      "access": "VIEW",
+      "createdAt": "2026-09-26T18:28:51.513Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "3db19965-be3b-4889-96b8-02583da61761",
+      "action": "grant:VIEW",
+      "createdAt": "2026-09-26T18:28:51.515Z",
+      "user": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      }
+    },
+    {
+      "id": "917066b0-65a0-41e1-90bd-9f152112ff48",
+      "action": "download_url",
+      "createdAt": "2026-09-26T18:28:51.503Z",
+      "user": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      }
+    },
+    {
+      "id": "a1c08d65-e4e1-4e56-b596-d5c0b080cf85",
+      "action": "upload",
+      "createdAt": "2026-09-26T18:28:51.489Z",
+      "user": {
+        "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+        "displayName": "Ana"
+      }
+    }
+  ],
+  "ocrCreate": {
+    "id": "ebad0b22-f6c1-4de7-9443-bb2c99793617",
+    "documentId": "47ab24e3-d8e1-48dc-a280-371d4515cbd1",
+    "status": "PENDING",
+    "attempts": 0,
+    "errorCode": null,
+    "createdAt": "2026-09-26T18:28:51.531Z",
+    "startedAt": null,
+    "finishedAt": null,
+    "confirmedAt": null,
+    "confirmedExpenseId": null,
+    "proposal": null,
+    "maxAttempts": 3,
+    "canRetry": false,
+    "provider": "fake"
+  },
+  "ocrJob": {
+    "id": "ebad0b22-f6c1-4de7-9443-bb2c99793617",
+    "documentId": "47ab24e3-d8e1-48dc-a280-371d4515cbd1",
+    "status": "SUCCEEDED",
+    "attempts": 1,
+    "errorCode": null,
+    "createdAt": "2026-09-26T18:28:51.531Z",
+    "startedAt": "2026-09-26T18:28:51.534Z",
+    "finishedAt": "2026-09-26T18:28:51.537Z",
+    "confirmedAt": null,
+    "confirmedExpenseId": null,
+    "proposal": {
+      "items": [],
+      "currency": "USD",
+      "merchant": "X",
+      "confidence": 0.5,
+      "occurredAt": null,
+      "totalCents": 100
+    },
+    "maxAttempts": 3,
+    "canRetry": false,
+    "provider": "fake"
+  },
+  "notifications": [
+    {
+      "id": "17e5825c-23bd-4994-957c-92b732bc9e56",
+      "type": "ocr.finished",
+      "title": "Comprobante leído",
+      "body": "Revisa y confirma los datos detectados antes de guardar el gasto.",
+      "data": {
+        "ocrJobId": "ebad0b22-f6c1-4de7-9443-bb2c99793617"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.540Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "67a64fcb-86c3-4396-b00d-44727204fc93",
+      "type": "fund.movement",
+      "title": "Nuevo movimiento en Caja",
+      "body": "Revisa el historial del fondo para ver el detalle.",
+      "data": {
+        "fundId": "b2955590-a4d7-4a88-a41c-3882c0b47e9b",
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.461Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "e5b079c0-f346-43ed-9a38-92f49ac3e2da",
+      "type": "achievement.unlocked",
+      "title": "Logro conseguido: Primer cierre",
+      "body": "Liquida tu primer evento.",
+      "data": {
+        "code": "FIRST_CLOSE"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.407Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "b7448269-8cec-4b0d-8b24-8f434b07042e",
+      "type": "achievement.unlocked",
+      "title": "Logro conseguido: Cuentas claras",
+      "body": "Registra tu primer gasto.",
+      "data": {
+        "code": "FIRST_EXPENSE"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.342Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "c12fa569-e9a6-4cfe-95a6-341ddca54228",
+      "type": "budget.threshold",
+      "title": "Presupuesto al 90%: Mes",
+      "body": "Consumo del periodo: 9.00 de 10.00 USD.",
+      "data": {
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+        "budgetId": "fbda55a0-5021-4ce9-bf6d-fd993dec0a13"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.340Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "ee0f8598-daee-480b-b875-9a379e2fb74f",
+      "type": "achievement.unlocked",
+      "title": "Logro conseguido: Plan en marcha",
+      "body": "Crea tu primer evento.",
+      "data": {
+        "code": "FIRST_EVENT"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.285Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "5217975c-04be-4878-aaa2-758422de4f33",
+      "type": "invitation.accepted",
+      "title": "Bob se unió a G1",
+      "body": "Ya puede participar en eventos y gastos del grupo.",
+      "data": {
+        "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.247Z",
+      "readAt": null,
+      "archivedAt": null
+    },
+    {
+      "id": "ade45268-0263-41ac-8eb8-7599a53c7724",
+      "type": "achievement.unlocked",
+      "title": "Logro conseguido: Primer grupo",
+      "body": "Crea tu primer grupo.",
+      "data": {
+        "code": "FIRST_GROUP"
+      },
+      "status": "UNREAD",
+      "createdAt": "2026-09-26T18:28:51.208Z",
+      "readAt": null,
+      "archivedAt": null
+    }
+  ],
+  "unread": {
+    "unread": 8
+  },
+  "prefs": {
+    "preferences": [
+      {
+        "type": "invitation.received",
+        "inApp": true,
+        "email": false,
+        "push": false
+      },
+      {
+        "type": "invitation.accepted",
+        "inApp": true,
+        "email": false,
+        "push": false
+      },
+      {
+        "type": "settlement.created",
+        "inApp": true,
+        "email": true,
+        "push": false
+      },
+      {
+        "type": "transfer.paid",
+        "inApp": true,
+        "email": false,
+        "push": false
+      },
+      {
+        "type": "budget.threshold",
+        "inApp": true,
+        "email": true,
+        "push": false
+      },
+      {
+        "type": "fund.movement",
+        "inApp": true,
+        "email": false,
+        "push": false
+      },
+      {
+        "type": "ocr.finished",
+        "inApp": true,
+        "email": false,
+        "push": false
+      },
+      {
+        "type": "privacy.updated",
+        "inApp": true,
+        "email": true,
+        "push": false
+      },
+      {
+        "type": "achievement.unlocked",
+        "inApp": true,
+        "email": false,
+        "push": false
+      }
+    ],
+    "channels": {
+      "inApp": true,
+      "email": true,
+      "push": false
+    }
+  },
+  "achievements": [
+    {
+      "code": "FIRST_GROUP",
+      "name": "Primer grupo",
+      "description": "Crea tu primer grupo.",
+      "category": "COORDINACION",
+      "target": 1,
+      "progress": 1,
+      "status": "UNLOCKED",
+      "awardedAt": "2026-09-26T18:28:51.201Z"
+    },
+    {
+      "code": "FIRST_EVENT",
+      "name": "Plan en marcha",
+      "description": "Crea tu primer evento.",
+      "category": "EVENTOS",
+      "target": 1,
+      "progress": 1,
+      "status": "UNLOCKED",
+      "awardedAt": "2026-09-26T18:28:51.281Z"
+    },
+    {
+      "code": "EVENT_PLANNER",
+      "name": "Organizador",
+      "description": "Crea 5 eventos.",
+      "category": "EVENTOS",
+      "target": 5,
+      "progress": 1,
+      "status": "IN_PROGRESS",
+      "awardedAt": null
+    },
+    {
+      "code": "FIRST_EXPENSE",
+      "name": "Cuentas claras",
+      "description": "Registra tu primer gasto.",
+      "category": "GASTOS",
+      "target": 1,
+      "progress": 1,
+      "status": "UNLOCKED",
+      "awardedAt": "2026-09-26T18:28:51.338Z"
+    },
+    {
+      "code": "EXPENSE_TRACKER",
+      "name": "Registro al día",
+      "description": "Registra 25 gastos.",
+      "category": "GASTOS",
+      "target": 25,
+      "progress": 1,
+      "status": "IN_PROGRESS",
+      "awardedAt": null
+    },
+    {
+      "code": "FIRST_CLOSE",
+      "name": "Primer cierre",
+      "description": "Liquida tu primer evento.",
+      "category": "CIERRES",
+      "target": 1,
+      "progress": 1,
+      "status": "UNLOCKED",
+      "awardedAt": "2026-09-26T18:28:51.404Z"
+    },
+    {
+      "code": "CLOSER",
+      "name": "Cierra ciclos",
+      "description": "Liquida 5 eventos.",
+      "category": "CIERRES",
+      "target": 5,
+      "progress": 1,
+      "status": "IN_PROGRESS",
+      "awardedAt": null
+    },
+    {
+      "code": "GOOD_PAYER",
+      "name": "Buen pagador",
+      "description": "Paga tu primera deuda liquidada.",
+      "category": "PAGOS",
+      "target": 1,
+      "progress": 0,
+      "status": "LOCKED",
+      "awardedAt": null
+    },
+    {
+      "code": "RELIABLE_PAYER",
+      "name": "Palabra cumplida",
+      "description": "Paga 10 deudas liquidadas.",
+      "category": "PAGOS",
+      "target": 10,
+      "progress": 0,
+      "status": "LOCKED",
+      "awardedAt": null
+    },
+    {
+      "code": "CONNECTOR",
+      "name": "Conector",
+      "description": "Consigue que 3 personas acepten tus invitaciones.",
+      "category": "COORDINACION",
+      "target": 3,
+      "progress": 1,
+      "status": "IN_PROGRESS",
+      "awardedAt": null
+    }
+  ],
+  "achHistory": [
+    {
+      "code": "FIRST_CLOSE",
+      "name": "Primer cierre",
+      "description": "Liquida tu primer evento.",
+      "awardedAt": "2026-09-26T18:28:51.404Z"
+    },
+    {
+      "code": "FIRST_EXPENSE",
+      "name": "Cuentas claras",
+      "description": "Registra tu primer gasto.",
+      "awardedAt": "2026-09-26T18:28:51.338Z"
+    },
+    {
+      "code": "FIRST_EVENT",
+      "name": "Plan en marcha",
+      "description": "Crea tu primer evento.",
+      "awardedAt": "2026-09-26T18:28:51.281Z"
+    },
+    {
+      "code": "FIRST_GROUP",
+      "name": "Primer grupo",
+      "description": "Crea tu primer grupo.",
+      "awardedAt": "2026-09-26T18:28:51.201Z"
+    }
+  ],
+  "privacyCreate": {
+    "id": "26d35f71-8ab5-489f-bc10-d23486a4434b",
+    "type": "ACCESS",
+    "status": "PENDING",
+    "reason": null,
+    "createdAt": "2026-09-26T18:28:51.570Z",
+    "updatedAt": "2026-09-26T18:28:51.570Z",
+    "confirmedAt": null,
+    "cancelledAt": null,
+    "completedAt": null,
+    "exportExpiresAt": null,
+    "resultSummary": null,
+    "exportAvailable": false,
+    "requiresPassword": false
+  },
+  "privacyConfirm": {
+    "id": "26d35f71-8ab5-489f-bc10-d23486a4434b",
+    "type": "ACCESS",
+    "status": "COMPLETED",
+    "reason": null,
+    "createdAt": "2026-09-26T18:28:51.570Z",
+    "updatedAt": "2026-09-26T18:28:51.577Z",
+    "confirmedAt": "2026-09-26T18:28:51.576Z",
+    "cancelledAt": null,
+    "completedAt": "2026-09-26T18:28:51.576Z",
+    "exportExpiresAt": "2026-10-03T18:28:51.576Z",
+    "resultSummary": null,
+    "exportAvailable": true,
+    "requiresPassword": false
+  },
+  "privacyList": [
+    {
+      "id": "26d35f71-8ab5-489f-bc10-d23486a4434b",
+      "type": "ACCESS",
+      "status": "COMPLETED",
+      "reason": null,
+      "createdAt": "2026-09-26T18:28:51.570Z",
+      "updatedAt": "2026-09-26T18:28:51.577Z",
+      "confirmedAt": "2026-09-26T18:28:51.576Z",
+      "cancelledAt": null,
+      "completedAt": "2026-09-26T18:28:51.576Z",
+      "exportExpiresAt": "2026-10-03T18:28:51.576Z",
+      "resultSummary": null,
+      "exportAvailable": true,
+      "requiresPassword": false
+    }
+  ],
+  "me": {
+    "user": {
+      "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+      "email": "a@example.com",
+      "displayName": "Ana B",
+      "avatarUrl": null,
+      "locale": "es",
+      "emailVerified": false
+    }
+  },
+  "recovery": {
+    "accepted": true
+  }
+}

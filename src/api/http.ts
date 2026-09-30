@@ -55,8 +55,21 @@ export function readCsrfCookie(cookieSource = document.cookie): string | undefin
 /** Opciones adicionales admitidas por el adaptador HTTP. */
 export interface RequestOptions<T> extends Omit<RequestInit, 'body'> {
   body?: unknown;
+  /** Cuerpo binario (subida de documentos); se envía tal cual con su tipo MIME. */
+  rawBody?: Blob;
   idempotencyKey?: string;
   schema?: ZodType<T>;
+}
+
+/** Metadatos de paginación y reproducción idempotente devueltos por la API. */
+export interface ResponseMeta {
+  nextCursor?: string | null;
+  idempotencyReplayed?: boolean;
+}
+
+/** Operación de telemetría sin query string: evita registrar nombres de archivo o filtros. */
+function operationName(path: string): string {
+  return path.split('?')[0] ?? path;
 }
 
 function isEnvelope(value: unknown): value is ApiEnvelope<unknown> {
@@ -76,28 +89,41 @@ function captureCsrf(data: unknown): void {
 
 /** Ejecuta una petición con cookie, timeout, trazabilidad y validación del sobre. */
 export async function request<T>(path: string, options: RequestOptions<T> = {}): Promise<T> {
+  return (await requestWithMeta(path, options)).data;
+}
+
+/** Igual que `request`, pero conserva `meta` para cursores e idempotencia. */
+export async function requestWithMeta<T>(
+  path: string,
+  options: RequestOptions<T> = {},
+): Promise<{ data: T; meta: ResponseMeta }> {
+  const operation = operationName(path);
   const method = (options.method || 'GET').toUpperCase();
   const requestId = crypto.randomUUID();
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   headers.set('X-Request-ID', requestId);
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json');
+  if (options.rawBody)
+    headers.set('Content-Type', options.rawBody.type || 'application/octet-stream');
+  else if (options.body !== undefined) headers.set('Content-Type', 'application/json');
   if (mutationMethods.has(method) && !csrfToken) csrfToken = readCsrfCookie();
   if (mutationMethods.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
 
+  const { body, rawBody, schema, ...init } = options;
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
+      ...init,
       method,
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: rawBody ?? (body === undefined ? undefined : JSON.stringify(body)),
       credentials: 'include',
-      signal: options.signal ?? AbortSignal.timeout(15_000),
+      // Las subidas pueden tardar más que una consulta normal.
+      signal: init.signal ?? AbortSignal.timeout(rawBody ? 60_000 : 15_000),
     });
   } catch (error) {
-    recordTelemetry({ event: 'api_failure', operation: path, requestId });
+    recordTelemetry({ event: 'api_failure', operation, requestId });
     const message =
       error instanceof DOMException && error.name === 'TimeoutError'
         ? 'La solicitud tardó demasiado. Intenta de nuevo.'
@@ -115,7 +141,7 @@ export async function request<T>(path: string, options: RequestOptions<T> = {}):
   if (!isEnvelope(payload)) {
     recordTelemetry({
       event: 'api_failure',
-      operation: path,
+      operation,
       status: response.status,
       requestId: responseRequestId,
     });
@@ -131,7 +157,7 @@ export async function request<T>(path: string, options: RequestOptions<T> = {}):
     unauthorizedListeners.forEach((listener) => listener());
     recordTelemetry({
       event: 'api_unauthorized',
-      operation: path,
+      operation,
       status: 401,
       requestId: responseRequestId,
     });
@@ -140,7 +166,7 @@ export async function request<T>(path: string, options: RequestOptions<T> = {}):
   if (!response.ok || !payload.success) {
     recordTelemetry({
       event: 'api_failure',
-      operation: path,
+      operation,
       status: response.status,
       requestId: responseRequestId,
     });
@@ -151,12 +177,13 @@ export async function request<T>(path: string, options: RequestOptions<T> = {}):
     );
   }
 
-  if (options.schema) {
-    const result = options.schema.safeParse(payload.data);
+  const meta = (payload.meta ?? {}) as ResponseMeta;
+  if (schema) {
+    const result = schema.safeParse(payload.data);
     if (!result.success) {
       recordTelemetry({
         event: 'api_failure',
-        operation: path,
+        operation,
         status: response.status,
         requestId: responseRequestId,
       });
@@ -167,9 +194,9 @@ export async function request<T>(path: string, options: RequestOptions<T> = {}):
       );
     }
     captureCsrf(result.data);
-    return result.data;
+    return { data: result.data, meta };
   }
 
   captureCsrf(payload.data);
-  return payload.data as T;
+  return { data: payload.data as T, meta };
 }
