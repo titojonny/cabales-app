@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@heroui/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff, MailCheck, ShieldCheck } from 'lucide-react';
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
 import { useEffect, useRef, useState } from 'react';
@@ -8,8 +8,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import type { Session } from '../api/contracts';
 import { clearCsrfToken } from '../api/http';
+import { apiUrl } from '../api/http';
 import { modulesApi } from '../api/modules-api';
-import { queryKeys } from '../api/queries';
+import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import {
   emailOnlySchema,
@@ -124,6 +125,7 @@ export function LoginPage() {
         </span>
       }
     >
+      <GoogleButton />
       <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} noValidate>
         <label htmlFor="email">Correo</label>
         <input
@@ -190,6 +192,7 @@ export function RegisterPage() {
         </span>
       }
     >
+      <GoogleButton />
       <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} noValidate>
         <label htmlFor="display-name">Nombre</label>
         <input
@@ -499,6 +502,23 @@ function AuthFrame({
         <span>Diseñado para coordinar, no para complicar.</span>
       </aside>
     </main>
+  );
+}
+
+/** Solo presenta el acceso Google cuando la API lo habilita; nunca depende de un secreto en la PWA. */
+export function GoogleButton() {
+  const config = useQuery(queries.authConfig());
+  if (!config.data?.googleEnabled) return null;
+  return (
+    <Button
+      className="google-auth-button"
+      variant="tertiary"
+      fullWidth
+      type="button"
+      onPress={() => window.location.assign(apiUrl('/auth/google/start'))}
+    >
+      Continuar con Google
+    </Button>
   );
 }
 

@@ -21,7 +21,10 @@ async function mockPrivateApi(page: Page) {
     let data: unknown = [];
     let meta: unknown;
 
-    if (pathname.endsWith('/auth/me')) data = responses.me;
+    if (pathname.endsWith('/auth/config')) data = { googleEnabled: false };
+    else if (pathname.endsWith('/auth/methods'))
+      data = { providers: ['PASSWORD'], hasPassword: true };
+    else if (pathname.endsWith('/auth/me')) data = responses.me;
     else if (pathname.endsWith('/groups')) data = groupList;
     else if (pathname.endsWith('/cabudas/summary')) data = responses.cabudas;
     else if (pathname.endsWith('/cabudas/history')) {
@@ -58,6 +61,28 @@ async function expectNoHorizontalScroll(page: Page) {
     )
     .toBe(true);
 }
+
+test('muestra Continuar con Google solo con configuracion publica habilitada', async ({ page }) => {
+  await page.route('**/api/v1/auth/me', async (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: false,
+        error: { code: 'SESSION_INVALID', message: 'Sesion invalida' },
+      }),
+    }),
+  );
+  await page.route('**/api/v1/auth/config', async (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { googleEnabled: true } }),
+    }),
+  );
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+});
 
 test('las páginas principales no desbordan horizontalmente en cada viewport', async ({ page }) => {
   await mockPrivateApi(page);
@@ -161,7 +186,10 @@ test('abre un gasto con los datos del OCR prellenados y editables', async ({ pag
   await page.route('**/api/v1/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     let data: unknown = [];
-    if (pathname.endsWith('/auth/me')) data = responses.me;
+    if (pathname.endsWith('/auth/config')) data = { googleEnabled: false };
+    else if (pathname.endsWith('/auth/methods'))
+      data = { providers: ['PASSWORD'], hasPassword: true };
+    else if (pathname.endsWith('/auth/me')) data = responses.me;
     else if (pathname === '/api/v1/groups') data = [responses.group];
     else if (pathname === `/api/v1/groups/${groupId}`) data = responses.groupDetail;
     else if (pathname === `/api/v1/groups/${groupId}/events/${eventId}`)

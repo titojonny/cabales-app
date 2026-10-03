@@ -1,5 +1,11 @@
 # Cabales
 
+## P9: inicio de sesion con Google
+
+La PWA consulta `GET /api/v1/auth/config` y solo muestra **Continuar con Google** cuando la API responde `googleEnabled: true`; no conoce ni almacena credenciales OAuth. El inicio usa la redireccion del servidor y vuelve a la misma sesion por cookie HttpOnly y CSRF. Desde **Cuenta** se puede iniciar la vinculacion y solicitar la desvinculacion; la API mantiene al menos un metodo de acceso.
+
+Para habilitarlo configura en `cabales-api` un cliente OAuth web de Google Cloud y registra exactamente `http://localhost:3000/api/v1/auth/google/callback` (o el URI HTTPS de produccion) como URI de redireccion autorizado. Consulta el README de la API para el procedimiento completo.
+
 ## P3: agenda de eventos
 
 El detalle del evento permite editar fechas de inicio/fin, descripción, ubicación, Maps HTTPS, zona horaria y enlaces. También presenta botones RSVP accesibles (`PENDING`, `GOING`, `MAYBE`, `DECLINED`) con el estado propio y los recuentos, asistentes agrupados por estado, configuración de hasta cinco recordatorios y acciones de cancelar/eliminar con confirmación. La API mantiene la autorización; la app solo oculta controles cuando conoce el rol y muestra errores reales del servidor.

@@ -9,6 +9,8 @@ import type {
   Expense,
   ExpenseSummary,
   Group,
+  AuthConfig,
+  AuthMethods,
   LoginInput,
   PaidTransfer,
   RegisterInput,
@@ -30,6 +32,9 @@ import {
   groupListSchema,
   paidTransferSchema,
   sessionSchema,
+  authConfigSchema,
+  authMethodsSchema,
+  googleLinkStartSchema,
   settlementDetailSchema,
   settlementListSchema,
 } from './schemas';
@@ -46,6 +51,14 @@ function withCurrentMembership(group: Group, userId: string): Group {
 /** Adaptador único del contrato implementado por Cabales API `/api/v1`. */
 export const cabalesApi = {
   me: () => request<Session>('/auth/me', { schema: sessionSchema }),
+  authConfig: () => request<AuthConfig>('/auth/config', { schema: authConfigSchema }),
+  authMethods: () => request<AuthMethods>('/auth/methods', { schema: authMethodsSchema }),
+  startGoogleLink: () =>
+    request<{ authorizationUrl: string }>('/auth/google/link/start', {
+      method: 'POST',
+      schema: googleLinkStartSchema,
+    }),
+  unlinkGoogle: () => request<{ unlinked: true }>('/auth/google', { method: 'DELETE' }),
   login: (input: LoginInput) =>
     request<Session>('/auth/login', { method: 'POST', body: input, schema: sessionSchema }),
   register: (input: RegisterInput) =>

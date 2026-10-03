@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Session } from '../api/contracts';
+import { cabalesApi } from '../api/cabales-api';
 import { clearCsrfToken } from '../api/http';
 import { moduleKeys, moduleQueries } from '../api/module-queries';
 import type { PrivacyRequest, PrivacyRequestType } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
-import { queryKeys } from '../api/queries';
+import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { ErrorMessage, FieldError, formatDate, Icon } from '../components/ui';
 import { normalizeText } from '../domain/validation';
@@ -84,6 +85,90 @@ function ProfileSection() {
           {save.isPending ? 'Guardando…' : 'Guardar'}
         </Button>
       </form>
+    </section>
+  );
+}
+
+function GoogleAccountSection() {
+  const queryClient = useQueryClient();
+  const config = useQuery(queries.authConfig());
+  const methods = useQuery(queries.authMethods());
+  const link = useMutation({
+    mutationFn: cabalesApi.startGoogleLink,
+    onSuccess: ({ authorizationUrl }) => window.location.assign(authorizationUrl),
+  });
+  const unlink = useMutation({
+    mutationFn: cabalesApi.unlinkGoogle,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.authMethods }),
+  });
+
+  if (methods.isPending || config.isPending)
+    return (
+      <section className="form-card glass-panel" aria-busy="true">
+        <h2>Accesos vinculados</h2>
+        <p className="muted">Consultando tus métodos de acceso…</p>
+      </section>
+    );
+  if (methods.isError) {
+    return (
+      <section className="form-card glass-panel">
+        <h2>Accesos vinculados</h2>
+        <ErrorMessage error={methods.error} />
+      </section>
+    );
+  }
+  if (!methods.data)
+    return (
+      <section className="form-card glass-panel" aria-busy="true">
+        <h2>Accesos vinculados</h2>
+        <p className="muted">Aún no hay métodos de acceso disponibles.</p>
+      </section>
+    );
+  const authMethods = methods.data;
+  const linked = authMethods.providers.includes('GOOGLE');
+  return (
+    <section className="form-card glass-panel" aria-labelledby="auth-methods-title">
+      <h2 id="auth-methods-title">Accesos vinculados</h2>
+      <p className="muted small">
+        Usa Google con el mismo correo verificado para entrar sin crear otra cuenta.
+      </p>
+      {linked ? (
+        <div className="account-method-row">
+          <span>
+            <strong>Google</strong>
+            <small>Vinculado</small>
+          </span>
+          <Button
+            variant="tertiary"
+            type="button"
+            isDisabled={
+              unlink.isPending || (!authMethods.hasPassword && authMethods.providers.length <= 1)
+            }
+            onPress={() => unlink.mutate()}
+          >
+            {unlink.isPending ? 'Desvinculando…' : 'Desvincular'}
+          </Button>
+        </div>
+      ) : config.data?.googleEnabled ? (
+        <Button
+          variant="primary"
+          type="button"
+          isDisabled={link.isPending}
+          onPress={() => link.mutate()}
+        >
+          {link.isPending ? 'Abriendo Google…' : 'Vincular Google'}
+        </Button>
+      ) : (
+        <p className="muted small">Google no está habilitado en este servidor.</p>
+      )}
+      {!authMethods.hasPassword && linked && authMethods.providers.length <= 1 && (
+        <p className="muted small" role="status">
+          Añade una contraseña antes de desvincular Google para conservar otro método de acceso.
+        </p>
+      )}
+      {(link.isError || unlink.isError || config.isError) && (
+        <ErrorMessage error={link.error ?? unlink.error ?? config.error} />
+      )}
     </section>
   );
 }
@@ -310,6 +395,7 @@ export function AccountPage() {
       </nav>
       <div className="account-grid">
         <ProfileSection />
+        <GoogleAccountSection />
         <PrivacySection />
       </div>
       <div className="button-row">
