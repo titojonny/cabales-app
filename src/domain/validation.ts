@@ -124,6 +124,7 @@ export const expenseSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/, 'La moneda debe ser un código ISO de tres letras.'),
   payerId: z.string().uuid('Selecciona quién pagó.'),
   splitMode: z.enum(['EQUAL', 'EXACT']),
+  occurredAt: z.string().min(1, 'Selecciona la fecha y hora.'),
   categoryId: z.union([z.literal(''), z.string().uuid('Categoría inválida.')]).optional(),
 });
 

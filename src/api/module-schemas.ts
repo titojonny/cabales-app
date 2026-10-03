@@ -136,11 +136,36 @@ export const documentGrantListSchema = z.array(documentGrantSchema);
 export const ocrProposalSchema = z.object({
   merchant: z.string().nullable().optional(),
   totalCents: int.nullable().optional(),
+  subtotalCents: int.nullable().optional(),
+  taxCents: int.nullable().optional(),
+  tipCents: int.nullable().optional(),
   currency: z.string().nullable().optional(),
   occurredAt: z.string().nullable().optional(),
   // El proveedor de la API usa `name` para mantener el contrato con OCR y el modelo de gastos.
-  items: z.array(z.object({ name: z.string(), amountCents: int })).default([]),
-  confidence: z.number().min(0).max(1).optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string(),
+        amountCents: int,
+        quantity: int.positive().optional(),
+        confidence: z.number().min(0).max(1).nullable().optional(),
+      }),
+    )
+    .default([]),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  confidenceByField: z
+    .object({
+      merchant: z.number().min(0).max(1).nullable(),
+      occurredAt: z.number().min(0).max(1).nullable(),
+      currency: z.number().min(0).max(1).nullable(),
+      totalCents: z.number().min(0).max(1).nullable(),
+      subtotalCents: z.number().min(0).max(1).nullable(),
+      taxCents: z.number().min(0).max(1).nullable(),
+      tipCents: z.number().min(0).max(1).nullable(),
+      items: z.number().min(0).max(1).nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 export const ocrJobSchema = z.object({
   id,

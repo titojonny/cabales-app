@@ -138,6 +138,16 @@ La interfaz parte de 320 px, usa objetivos táctiles de al menos 44 px, navegaci
 
 Los tokens mantienen contraste sobre una identidad glassmorphism moderada con fondo propio. `prefers-reduced-motion` elimina movimientos y `prefers-reduced-transparency` reemplaza paneles translúcidos por superficies sólidas. Las áreas fijas respetan `safe-area-inset-*`.
 
+## Decisiones P1: borradores OCR e items
+
+Los tests de error HTTP usan el sobre real `{ success: false, error }` (incluido `503 PROVIDER_UNAVAILABLE`) para distinguir una respuesta de API de un fallo de red, y acotan el aviso OCR antes de comprobar su mensaje.
+
+Docs mantiene el OCR como propuesta editable: al terminar un trabajo se eligen grupo y evento y se abre el formulario de gasto con comercio, total, fecha e items prellenados. Los campos no detectados se muestran como pendientes de revisión. El editor funciona también en gastos manuales, permite asignar cada item a varias personas, reparte con restos mayores y envía siempre `splitMode=EXACT` con centavos calculados.
+
+La creación conserva idempotencia y manda los valores revisados por la persona; el `ocrJobId` solo sirve para validar y enlazar el documento en el API.
+
+En P1f2 los dobles de E2E y unitarias comparten `eventDetail`, con la forma estricta del detalle real (`links`, `settlement`, `_count` y `groupMember.user`). El formulario conserva el título de revisión y muestra el error dentro del aviso OCR cuando la consulta del trabajo falla, para permitir el registro manual. `routeFetch` resuelve por pathname exacto para que una ruta de grupo no capture eventos ni categorías.
+
 ## Pruebas y límites actuales
 
 Vitest cubre conservación de centavos, validación, cookie CSRF tras recarga, rutas y bodies reales, idempotencia recibida por intento, esquemas raw estrictos, transformaciones Prisma y semántica accesible. Playwright contiene un humo móvil para landing y acceso.

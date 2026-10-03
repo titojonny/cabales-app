@@ -15,6 +15,7 @@ export const moduleKeys = {
   documentsRoot: ['documents'] as const,
   documentGrants: (documentId: string) => ['documents', 'grants', documentId] as const,
   ocrJobs: (documentId?: string) => ['ocr', documentId ?? 'all'] as const,
+  ocrJob: (jobId: string) => ['ocr', 'job', jobId] as const,
   ocrRoot: ['ocr'] as const,
   cabudas: ['cabudas'] as const,
   cabudasHistory: (status: string) => ['cabudas', 'history', status] as const,

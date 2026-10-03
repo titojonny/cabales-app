@@ -118,3 +118,67 @@ test('la navegación principal funciona en cada viewport', async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/mas$/);
   await expectNoHorizontalScroll(page);
 });
+
+test('abre un gasto con los datos del OCR prellenados y editables', async ({ page }) => {
+  const groupId = responses.group.id;
+  const eventId = responses.event.id;
+  const jobId = 'f4b7f9ac-9c19-44c0-bf6c-0f8a1a9f6e01';
+  const job = {
+    id: jobId,
+    documentId: '8b7f7a5e-7f25-4e8b-9c2d-1cb7f8e8d001',
+    status: 'SUCCEEDED',
+    attempts: 1,
+    errorCode: null,
+    createdAt: '2026-10-03T10:00:00.000Z',
+    finishedAt: '2026-10-03T10:00:02.000Z',
+    confirmedAt: null,
+    confirmedExpenseId: null,
+    proposal: {
+      merchant: 'Mercado Central',
+      totalCents: 1234,
+      subtotalCents: 1100,
+      taxCents: 134,
+      tipCents: null,
+      currency: 'USD',
+      occurredAt: '2026-10-02T00:00:00.000Z',
+      items: [{ name: 'Cafe', amountCents: 1234, quantity: 1, confidence: 0.9 }],
+      confidence: 0.91,
+      confidenceByField: {
+        merchant: 0.9,
+        occurredAt: 0.9,
+        currency: 0.9,
+        totalCents: 0.95,
+        subtotalCents: 0.9,
+        taxCents: 0.88,
+        tipCents: null,
+        items: 0.72,
+      },
+    },
+    maxAttempts: 3,
+    canRetry: false,
+    provider: 'tesseract',
+  };
+  await page.route('**/api/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    let data: unknown = [];
+    if (pathname.endsWith('/auth/me')) data = responses.me;
+    else if (pathname === '/api/v1/groups') data = [responses.group];
+    else if (pathname === `/api/v1/groups/${groupId}`) data = responses.groupDetail;
+    else if (pathname === `/api/v1/groups/${groupId}/events/${eventId}`)
+      data = responses.eventDetail;
+    else if (pathname === `/api/v1/groups/${groupId}/categories`) data = responses.categories;
+    else if (pathname === `/api/v1/ocr/jobs/${jobId}`) data = job;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data }),
+    });
+  });
+  await page.goto(`/app/groups/${groupId}/events/${eventId}/expenses/new?ocrJobId=${jobId}`);
+  await expect(page.getByRole('heading', { name: 'Revisar gasto escaneado' })).toBeVisible();
+  await expect(page.getByLabel('Título')).toHaveValue('Mercado Central');
+  await expect(page.getByRole('textbox', { name: 'Total' })).toHaveValue('12.34');
+  await expect(page.getByLabel('Nombre')).toHaveValue('Cafe');
+  await expect(page.getByText('Datos sugeridos por el escaneo')).toBeVisible();
+  await expect(page.getByText(/Todo es editable/)).toBeVisible();
+});

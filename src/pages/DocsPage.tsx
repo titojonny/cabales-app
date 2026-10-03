@@ -1,6 +1,7 @@
 import { Button } from '@heroui/react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { HttpError } from '../api/http';
 import { moduleKeys } from '../api/module-queries';
 import type { Document, OcrJob } from '../api/module-schemas';
@@ -28,6 +29,16 @@ const ocrStatusLabel: Record<OcrJob['status'], string> = {
   SUCCEEDED: 'Listo para revisar',
   FAILED: 'Falló',
 };
+
+function proposalAmount(
+  cents: number | null | undefined,
+  currency: string | null | undefined,
+): string {
+  if (cents == null) return 'No detectado';
+  return currency
+    ? formatMoney(cents, currency)
+    : `${(cents / 100).toFixed(2)} · moneda no detectada`;
+}
 
 /** Descarga mediante URL firmada de corta duración; el archivo llega como adjunto. */
 async function download(document_: Document) {
@@ -118,6 +129,79 @@ export function OcrProviderNotice({ provider }: { provider: string }) {
       Esta propuesta proviene del proveedor local: son datos de prueba de desarrollo y no deben
       confirmarse como reales. Revísalos contra el comprobante antes de vincularlos.
     </p>
+  );
+}
+
+function OcrExpenseLauncher({ job }: { job: OcrJob }) {
+  const groups = useQuery(queries.groups());
+  const [groupId, setGroupId] = useState('');
+  const [eventId, setEventId] = useState('');
+  const events = useQuery({ ...queries.events(groupId), enabled: Boolean(groupId) });
+  useEffect(() => {
+    if (!groupId && groups.data?.length === 1) setGroupId(groups.data[0]!.id);
+  }, [groupId, groups.data]);
+  useEffect(() => {
+    if (events.data && !events.data.some((event) => event.id === eventId)) setEventId('');
+  }, [eventId, events.data]);
+  const href =
+    groupId && eventId
+      ? `/app/groups/${groupId}/events/${eventId}/expenses/new?ocrJobId=${encodeURIComponent(job.id)}`
+      : '#';
+  return (
+    <div className="ocr-create-expense">
+      <strong>Crear gasto con este ticket</strong>
+      <p className="muted small">
+        Elige el grupo y el evento. El formulario abrirá los datos editables del escaneo.
+      </p>
+      <div className="field-pair">
+        <div>
+          <label htmlFor={`ocr-group-${job.id}`}>Grupo</label>
+          <select
+            id={`ocr-group-${job.id}`}
+            value={groupId}
+            onChange={(event) => {
+              setGroupId(event.target.value);
+              setEventId('');
+            }}
+          >
+            <option value="">Selecciona un grupo</option>
+            {(groups.data ?? []).map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`ocr-event-${job.id}`}>Evento</label>
+          <select
+            id={`ocr-event-${job.id}`}
+            value={eventId}
+            disabled={!groupId || events.isPending}
+            onChange={(event) => setEventId(event.target.value)}
+          >
+            <option value="">Selecciona un evento</option>
+            {(events.data ?? [])
+              .filter((event) => event.status === 'OPEN' && !event.settlement)
+              .map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
+      <Link
+        className={`button primary ${!eventId ? 'is-disabled' : ''}`}
+        aria-disabled={!eventId}
+        to={href}
+        onClick={(event) => {
+          if (!eventId) event.preventDefault();
+        }}
+      >
+        Abrir gasto editable
+      </Link>
+    </div>
   );
 }
 
@@ -212,29 +296,63 @@ function OcrPanel({ document_ }: { document_: Document }) {
               <dl className="proposal">
                 <div>
                   <dt>Comercio</dt>
-                  <dd>{latest.proposal.merchant || '—'}</dd>
+                  <dd>{latest.proposal.merchant || 'No detectado'}</dd>
                 </div>
                 <div>
                   <dt>Total</dt>
                   <dd>
                     {latest.proposal.totalCents != null && latest.proposal.currency
                       ? formatMoney(latest.proposal.totalCents, latest.proposal.currency)
-                      : '—'}
+                      : 'No detectado'}
                   </dd>
+                </div>
+                <div>
+                  <dt>Moneda</dt>
+                  <dd>{latest.proposal.currency || 'No detectada'}</dd>
                 </div>
                 <div>
                   <dt>Fecha</dt>
                   <dd>
-                    {latest.proposal.occurredAt ? formatDate(latest.proposal.occurredAt) : '—'}
+                    {latest.proposal.occurredAt
+                      ? formatDate(latest.proposal.occurredAt)
+                      : 'No detectado'}
                   </dd>
                 </div>
-                {latest.proposal.confidence !== undefined && (
-                  <div>
-                    <dt>Confianza</dt>
-                    <dd>{Math.round(latest.proposal.confidence * 100)} %</dd>
-                  </div>
-                )}
+                <div>
+                  <dt>Confianza</dt>
+                  <dd>
+                    {latest.proposal.confidence == null
+                      ? 'No disponible'
+                      : `${Math.round(latest.proposal.confidence * 100)} %`}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Subtotal</dt>
+                  <dd>{proposalAmount(latest.proposal.subtotalCents, latest.proposal.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Impuesto</dt>
+                  <dd>{proposalAmount(latest.proposal.taxCents, latest.proposal.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Propina</dt>
+                  <dd>{proposalAmount(latest.proposal.tipCents, latest.proposal.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Items detectados</dt>
+                  <dd>
+                    {latest.proposal.items.length
+                      ? latest.proposal.items
+                          .map(
+                            (item) =>
+                              `${item.name} × ${item.quantity ?? 1}: ${proposalAmount(item.amountCents, latest.proposal?.currency)}`,
+                          )
+                          .join(' · ')
+                      : 'No detectados'}
+                  </dd>
+                </div>
               </dl>
+              {!latest.confirmedAt && <OcrExpenseLauncher job={latest} />}
               {!latest.confirmedAt && document_.groupId && (
                 <div className="inline-entry">
                   <label htmlFor={`ocr-expense-${latest.id}`} className="sr-only">
@@ -265,7 +383,7 @@ function OcrPanel({ document_ }: { document_: Document }) {
               )}
               {!document_.groupId && (
                 <p className="muted small">
-                  Comparte el documento con un grupo para vincularlo a un gasto.
+                  Es un documento privado; podrás enlazarlo al gasto que crees desde este ticket.
                 </p>
               )}
             </>

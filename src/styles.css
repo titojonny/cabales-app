@@ -867,6 +867,63 @@ legend {
 .split-summary p {
   color: var(--color-muted);
 }
+.split-summary h2 {
+  margin: 1rem 0 0.45rem;
+  font-size: 1rem;
+}
+.split-person-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.split-person-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.ocr-review-notice,
+.ocr-create-expense,
+.item-editor {
+  padding: 1rem;
+  border-radius: 18px;
+}
+.ocr-review-notice {
+  margin-bottom: 1rem;
+  border-color: rgba(98, 230, 201, 0.38);
+}
+.ocr-review-notice p,
+.ocr-create-expense p {
+  margin: 0.45rem 0;
+}
+.ocr-create-expense {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0;
+  background: rgba(98, 230, 201, 0.06);
+}
+.ocr-create-expense .button {
+  width: fit-content;
+}
+.ocr-create-expense .is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.items-editor {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+  padding: 0;
+}
+.items-editor > .section-heading {
+  margin-bottom: 0;
+}
+.item-editor {
+  display: grid;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.035);
+}
 .settlement-row {
   grid-template-columns: 32px 1fr;
 }

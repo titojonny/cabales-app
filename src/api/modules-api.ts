@@ -212,6 +212,7 @@ export const modulesApi = {
   // OCR.
   ocrJobs: (documentId?: string) =>
     request(`/ocr/jobs${toQuery({ documentId })}`, { schema: ocrJobListSchema }),
+  ocrJob: (jobId: string) => request(`/ocr/jobs/${enc(jobId)}`, { schema: ocrJobSchema }),
   createOcrJob: (documentId: string) =>
     request('/ocr/jobs', { method: 'POST', body: { documentId }, schema: ocrJobSchema }),
   retryOcrJob: (jobId: string) =>
@@ -230,8 +231,12 @@ export const modulesApi = {
     requestWithMeta(`/cabudas/history${toQuery(filters)}`, { schema: cabudasHistorySchema }),
   statistics: (filters: { from?: string; to?: string; groupId?: string; currency?: string }) =>
     request(`/statistics/summary${toQuery(filters)}`, { schema: statisticsSchema }),
-  statisticsExport: (filters: { from?: string; to?: string; groupId?: string; currency?: string }) =>
-    requestFile(`/statistics/summary/export${toQuery(filters)}`),
+  statisticsExport: (filters: {
+    from?: string;
+    to?: string;
+    groupId?: string;
+    currency?: string;
+  }) => requestFile(`/statistics/summary/export${toQuery(filters)}`),
 
   // Avisos.
   notifications: (status: 'ACTIVE' | 'UNREAD' | 'ARCHIVED' = 'ACTIVE', cursor?: string) =>
@@ -253,10 +258,8 @@ export const modulesApi = {
   notificationPreferences: () =>
     request('/notifications/preferences', { schema: notificationPreferencesSchema }),
   pushConfig: () => request('/notifications/push-config', { schema: pushConfigSchema }),
-  createPushSubscription: (input: {
-    endpoint: string;
-    keys: { p256dh: string; auth: string };
-  }) => request('/notifications/push-subscriptions', { method: 'POST', body: input }),
+  createPushSubscription: (input: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    request('/notifications/push-subscriptions', { method: 'POST', body: input }),
   deletePushSubscription: (endpoint: string) =>
     request('/notifications/push-subscriptions', { method: 'DELETE', body: { endpoint } }),
   updateNotificationPreferences: (preferences: NotificationPreferences['preferences']) =>

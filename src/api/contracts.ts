@@ -237,6 +237,7 @@ export interface CreateEventInput {
 /** Carga real de gasto; la clave idempotente viaja fuera del body. */
 export interface CreateExpenseInput {
   eventId: string;
+  ocrJobId?: string;
   title: string;
   notes?: string;
   totalCents: number;
