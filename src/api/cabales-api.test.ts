@@ -11,6 +11,28 @@ const settlementId = '99999999-9999-4999-8999-999999999999';
 const transferId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const timestamp = '2026-08-21T12:00:00.000Z';
 
+const eventDetailResponse = {
+  id: eventId,
+  groupId,
+  name: 'Cena',
+  description: null,
+  startsAt: timestamp,
+  endsAt: null,
+  locationName: null,
+  locationAddress: null,
+  mapsUrl: null,
+  timeZone: null,
+  status: 'OPEN',
+  createdById: '11111111-1111-4111-8111-111111111111',
+  createdAt: timestamp,
+  participants: [],
+  links: [],
+  reminders: [],
+  rsvpCounts: { PENDING: 0, GOING: 0, MAYBE: 0, DECLINED: 0 },
+  settlement: null,
+  _count: { expenses: 0 },
+};
+
 function response(data: unknown): Response {
   return new Response(JSON.stringify({ success: true, data }), {
     status: 200,
@@ -65,6 +87,40 @@ afterEach(() => {
 });
 
 describe('cabalesApi financiero', () => {
+  it('usa las rutas P3 y cuerpos estrictos para RSVP, edicion, cancelacion y recordatorios', async () => {
+    document.cookie = 'cabales_session_csrf=csrf-for-event-api-tests-123; path=/';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(eventDetailResponse))
+      .mockResolvedValueOnce(response(eventDetailResponse))
+      .mockResolvedValueOnce(response(eventDetailResponse))
+      .mockResolvedValueOnce(response(eventDetailResponse))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await cabalesApi.rsvpEvent(groupId, eventId, 'GOING');
+    await cabalesApi.updateEvent(groupId, eventId, { name: 'Cena editada' });
+    await cabalesApi.cancelEvent(groupId, eventId);
+    await cabalesApi.updateEventReminders(groupId, eventId, [{ minutesBefore: 60, enabled: true }]);
+    await cabalesApi.deleteEvent(groupId, eventId);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      `/api/v1/groups/${groupId}/events/${eventId}/rsvp`,
+      `/api/v1/groups/${groupId}/events/${eventId}`,
+      `/api/v1/groups/${groupId}/events/${eventId}/cancel`,
+      `/api/v1/groups/${groupId}/events/${eventId}/reminders`,
+      `/api/v1/groups/${groupId}/events/${eventId}`,
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({ status: 'GOING' });
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({
+      name: 'Cena editada',
+    });
+    expect(JSON.parse(fetchMock.mock.calls[3][1]?.body as string)).toEqual({
+      reminders: [{ minutesBefore: 60, enabled: true }],
+    });
+    expect(fetchMock.mock.calls[4][1]?.method).toBe('DELETE');
+  });
+
   it('usa rutas anidadas, bodies reales y la clave recibida por el intento', async () => {
     document.cookie = 'cabales_session_csrf=csrf-for-api-route-tests-123; path=/';
     const fetchMock = vi
@@ -123,9 +179,23 @@ describe('cabalesApi financiero', () => {
       name: 'Cena',
       description: null,
       startsAt: timestamp,
+      endsAt: null,
+      locationName: null,
+      locationAddress: null,
+      mapsUrl: null,
+      timeZone: null,
       status: 'OPEN',
+      createdById: user.id,
       createdAt: timestamp,
-      participants: [{ id: participantId, groupMemberId: null, guestName: 'Ana' }],
+      participants: [
+        {
+          id: participantId,
+          groupMemberId: null,
+          guestName: 'Ana',
+          rsvpStatus: 'PENDING',
+          respondedAt: null,
+        },
+      ],
     };
     const fetchMock = vi
       .fn()

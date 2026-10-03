@@ -5,6 +5,7 @@ import type {
   CreateGroupInput,
   CreatedInvitation,
   Event,
+  UpdateEventInput,
   Expense,
   ExpenseSummary,
   Group,
@@ -89,6 +90,39 @@ export const cabalesApi = {
       body: input,
       schema: createdEventSchema,
     }),
+  updateEvent: (groupId: string, eventId: string, input: UpdateEventInput) =>
+    request<Event>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'PATCH',
+      body: input,
+      schema: eventDetailSchema,
+    }),
+  cancelEvent: (groupId: string, eventId: string) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/cancel`,
+      { method: 'POST', schema: eventDetailSchema },
+    ),
+  deleteEvent: (groupId: string, eventId: string) =>
+    request<void>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE',
+    }),
+  rsvpEvent: (
+    groupId: string,
+    eventId: string,
+    status: 'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED',
+  ) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/rsvp`,
+      { method: 'PUT', body: { status }, schema: eventDetailSchema },
+    ),
+  updateEventReminders: (
+    groupId: string,
+    eventId: string,
+    reminders: Array<{ minutesBefore: number; enabled: boolean }>,
+  ) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/reminders`,
+      { method: 'PUT', body: { reminders }, schema: eventDetailSchema },
+    ),
   createExpense: (groupId: string, input: CreateExpenseInput, idempotencyKey: string) =>
     request<Expense>(`/groups/${encodeURIComponent(groupId)}/expenses`, {
       method: 'POST',

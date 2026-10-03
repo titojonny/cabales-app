@@ -1,5 +1,9 @@
 # Cabales
 
+## P3: agenda de eventos
+
+El detalle del evento permite editar fechas de inicio/fin, descripción, ubicación, Maps HTTPS, zona horaria y enlaces. También presenta botones RSVP accesibles (`PENDING`, `GOING`, `MAYBE`, `DECLINED`) con el estado propio y los recuentos, asistentes agrupados por estado, configuración de hasta cinco recordatorios y acciones de cancelar/eliminar con confirmación. La API mantiene la autorización; la app solo oculta controles cuando conoce el rol y muestra errores reales del servidor.
+
 PWA Mobile First para organizar grupos, registrar eventos, dividir gastos y cerrar liquidaciones. Este repositorio contiene el cliente web React (Tailwind CSS y TypeScript) y consume el contrato HTTP de Cabales API `/api/v1` (Express + PostgreSQL) sin importar código del servidor.
 
 ## P2: reparto porcentual y desglose
@@ -83,6 +87,7 @@ La primera ejecución E2E requiere el navegador local: `pnpm exec playwright ins
 | `/app/groups/:groupId/events`                                       | Eventos del grupo.                                |
 | `/app/groups/:groupId/events/new`                                   | Creación de evento.                               |
 | `/app/groups/:groupId/events/:eventId`                              | Padrón, enlaces y gastos del evento.              |
+| `/app/groups/:groupId/events/:eventId/edit`                         | Edición de fechas, ubicación y enlaces.           |
 | `/app/groups/:groupId/events/:eventId/expenses/new`                 | Divisor manual de gasto.                          |
 | `/app/groups/:groupId/expenses/:expenseId`                          | Vista de gasto y reparto persistido.              |
 | `/app/groups/:groupId/settlements`                                  | Liquidaciones y estado de transferencias.         |
@@ -110,7 +115,7 @@ El adaptador está contrastado con `cabales-api/src/modules` y `docs/openapi.yam
 - `GET /auth/me`, `POST /auth/login`, `POST /auth/register`, `POST /auth/logout`.
 - `GET|POST /groups` y `GET /groups/:groupId`.
 - `POST /groups/:groupId/invitations` y `POST /groups/invitations/accept`.
-- `GET|POST /groups/:groupId/events` y `GET /groups/:groupId/events/:eventId`.
+- `GET|POST /groups/:groupId/events`, `GET|PATCH|DELETE /groups/:groupId/events/:eventId`, cancelación, RSVP propio y recordatorios.
 - `GET|POST /groups/:groupId/expenses` y `GET /groups/:groupId/expenses/:expenseId`.
 - `GET|POST /groups/:groupId/settlements` y `GET /groups/:groupId/settlements/:settlementId`.
 - `PATCH /groups/:groupId/settlements/:settlementId/transfers/:transferId/paid`.

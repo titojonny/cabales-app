@@ -152,7 +152,17 @@ const rawEventBase = {
   name: z.string().min(2).max(160),
   description: z.string().max(1000).nullable(),
   startsAt: date,
+  endsAt: date.nullable(),
+  locationName: z.string().max(160).nullable(),
+  locationAddress: z.string().max(500).nullable(),
+  mapsUrl: z
+    .string()
+    .url()
+    .refine((value) => value.startsWith('https://'))
+    .nullable(),
+  timeZone: z.string().max(80).nullable(),
   status: eventStatus,
+  createdById: id,
   createdAt: date,
 };
 
@@ -177,7 +187,13 @@ export const eventListSchema = z
       name: event.name,
       description: toDescription(event.description),
       startsAt: event.startsAt,
+      endsAt: event.endsAt ?? undefined,
+      locationName: event.locationName ?? undefined,
+      locationAddress: event.locationAddress ?? undefined,
+      mapsUrl: event.mapsUrl ?? undefined,
+      timeZone: event.timeZone ?? undefined,
       status: event.status,
+      createdById: event.createdById,
       createdAt: event.createdAt,
       participantCount: event._count.participants,
       expenseCount: event._count.expenses,
@@ -190,23 +206,38 @@ export const createdEventSchema = z
   .strictObject({
     ...rawEventBase,
     participants: z.array(
-      z.strictObject({ id, groupMemberId: id.nullable(), guestName: z.string().nullable() }),
+      z.strictObject({
+        id,
+        groupMemberId: id.nullable(),
+        guestName: z.string().nullable(),
+        rsvpStatus: z.enum(['PENDING', 'GOING', 'MAYBE', 'DECLINED']),
+        respondedAt: date.nullable(),
+      }),
     ),
   })
   .transform((event) => ({
     ...event,
     description: toDescription(event.description),
+    endsAt: event.endsAt ?? undefined,
+    locationName: event.locationName ?? undefined,
+    locationAddress: event.locationAddress ?? undefined,
+    mapsUrl: event.mapsUrl ?? undefined,
+    timeZone: event.timeZone ?? undefined,
     participantCount: event.participants.length,
     participants: event.participants.map((participant) => ({
       id: participant.id,
       guestName: participant.guestName ?? undefined,
       groupMember: participant.groupMemberId ? { id: participant.groupMemberId } : null,
+      rsvpStatus: participant.rsvpStatus,
+      respondedAt: participant.respondedAt ?? undefined,
     })),
   }));
 
 const rawEventParticipant = z.strictObject({
   id,
   guestName: z.string().nullable(),
+  rsvpStatus: z.enum(['PENDING', 'GOING', 'MAYBE', 'DECLINED']),
+  respondedAt: date.nullable(),
   groupMember: z
     .strictObject({
       id,
@@ -225,6 +256,15 @@ export const eventDetailSchema = z
     ...rawEventBase,
     participants: z.array(rawEventParticipant),
     links: z.array(z.strictObject({ id, label: z.string().min(1).max(80), url: z.string().url() })),
+    reminders: z.array(
+      z.strictObject({ id, minutesBefore: z.number().int().positive(), enabled: z.boolean() }),
+    ),
+    rsvpCounts: z.strictObject({
+      PENDING: z.number().int().nonnegative(),
+      GOING: z.number().int().nonnegative(),
+      MAYBE: z.number().int().nonnegative(),
+      DECLINED: z.number().int().nonnegative(),
+    }),
     settlement: rawSettlementReference.extend({ createdAt: date }).strict().nullable(),
     _count: z.strictObject({ expenses: z.number().int().nonnegative() }),
   })
@@ -234,7 +274,13 @@ export const eventDetailSchema = z
     name: event.name,
     description: toDescription(event.description),
     startsAt: event.startsAt,
+    endsAt: event.endsAt ?? undefined,
+    locationName: event.locationName ?? undefined,
+    locationAddress: event.locationAddress ?? undefined,
+    mapsUrl: event.mapsUrl ?? undefined,
+    timeZone: event.timeZone ?? undefined,
     status: event.status,
+    createdById: event.createdById,
     createdAt: event.createdAt,
     participantCount: event.participants.length,
     expenseCount: event._count.expenses,
@@ -242,8 +288,12 @@ export const eventDetailSchema = z
       id: participant.id,
       guestName: participant.guestName ?? undefined,
       groupMember: participant.groupMember,
+      rsvpStatus: participant.rsvpStatus,
+      respondedAt: participant.respondedAt ?? undefined,
     })),
     links: event.links,
+    reminders: event.reminders,
+    rsvpCounts: event.rsvpCounts,
     settlement: event.settlement ?? undefined,
   }));
 

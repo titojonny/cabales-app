@@ -297,6 +297,11 @@ export function CreateEventPage() {
       name: '',
       description: '',
       startsAt: '',
+      endsAt: '',
+      locationName: '',
+      locationAddress: '',
+      mapsUrl: '',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       memberIds: [],
       guests: [],
       links: [],
@@ -311,6 +316,11 @@ export function CreateEventPage() {
         name: values.name,
         ...(values.description ? { description: values.description } : {}),
         startsAt: new Date(values.startsAt).toISOString(),
+        ...(values.endsAt ? { endsAt: new Date(values.endsAt).toISOString() } : {}),
+        ...(values.locationName ? { locationName: values.locationName } : {}),
+        ...(values.locationAddress ? { locationAddress: values.locationAddress } : {}),
+        ...(values.mapsUrl ? { mapsUrl: values.mapsUrl } : {}),
+        ...(values.timeZone ? { timeZone: values.timeZone } : {}),
         memberIds: values.memberIds,
         guests: values.guests,
         links: values.links,
@@ -361,10 +371,30 @@ export function CreateEventPage() {
             {...form.register('startsAt')}
           />
           <FieldError id="starts-at-error" message={form.formState.errors.startsAt?.message} />
+          <label htmlFor="ends-at">
+            Fecha y hora de fin <span className="optional">Opcional</span>
+          </label>
+          <input id="ends-at" type="datetime-local" {...form.register('endsAt')} />
+          <FieldError id="ends-at-error" message={form.formState.errors.endsAt?.message} />
           <label htmlFor="event-description">
             Descripción <span className="optional">Opcional</span>
           </label>
           <textarea id="event-description" rows={3} {...form.register('description')} />
+          <label htmlFor="event-location-name">
+            Lugar <span className="optional">Opcional</span>
+          </label>
+          <input id="event-location-name" {...form.register('locationName')} />
+          <label htmlFor="event-location-address">Dirección</label>
+          <input id="event-location-address" {...form.register('locationAddress')} />
+          <label htmlFor="event-maps-url">Enlace de Maps</label>
+          <input
+            id="event-maps-url"
+            type="url"
+            placeholder="https://maps.google.com/"
+            {...form.register('mapsUrl')}
+          />
+          <label htmlFor="event-time-zone">Zona horaria</label>
+          <input id="event-time-zone" {...form.register('timeZone')} />
           <fieldset>
             <legend>Integrantes del grupo</legend>
             <p className="muted">Tu membresía se añade automáticamente como creadora.</p>

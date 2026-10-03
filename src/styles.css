@@ -1048,6 +1048,81 @@ legend {
   text-decoration: underline;
   text-underline-offset: 0.2rem;
 }
+
+.event-overview {
+  padding: 1.2rem;
+  border-radius: 22px;
+}
+
+.event-facts {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+
+.event-facts dt {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.event-facts dd {
+  margin: 0.2rem 0 0;
+}
+
+.event-overview a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.rsvp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.rsvp-grid button {
+  min-height: 48px;
+}
+
+.rsvp-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.rsvp-counts span {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.rsvp-counts strong {
+  color: var(--color-accent);
+}
+
+.attendee-group h3 {
+  margin: 1rem 0 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.reminder-options {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+}
+
+.event-danger-actions {
+  margin-top: 1rem;
+}
+
+.event-danger-actions button {
+  border-color: rgba(255, 100, 100, 0.45);
+  color: #ffb0b0;
+}
 .transfer-history {
   grid-column: 1 / -1;
   color: var(--color-muted);

@@ -300,6 +300,7 @@ export const NOTIFICATION_TYPES = [
   'ocr.finished',
   'privacy.updated',
   'achievement.unlocked',
+  'event.reminder',
 ] as const;
 export const notificationSchema = z.object({
   id,

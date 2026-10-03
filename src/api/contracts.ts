@@ -62,12 +62,25 @@ export interface Event {
   name: string;
   description?: string;
   startsAt: string;
+  endsAt?: string;
+  locationName?: string;
+  locationAddress?: string;
+  mapsUrl?: string;
+  timeZone?: string;
   status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  createdById: string;
   createdAt: string;
   participantCount?: number;
   expenseCount?: number;
-  participants?: EventParticipant[];
+  participants?: Array<
+    EventParticipant & {
+      rsvpStatus: 'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED';
+      respondedAt?: string;
+    }
+  >;
   links?: Array<{ id: string; label: string; url: string }>;
+  reminders?: Array<{ id: string; minutesBefore: number; enabled: boolean }>;
+  rsvpCounts?: Record<'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED', number>;
   settlement?: { id: string; status: 'OPEN' | 'COMPLETED' | 'CANCELLED'; createdAt?: string };
 }
 
@@ -238,9 +251,26 @@ export interface CreateEventInput {
   name: string;
   description?: string;
   startsAt: string;
+  endsAt?: string;
+  locationName?: string | null;
+  locationAddress?: string | null;
+  mapsUrl?: string | null;
+  timeZone?: string | null;
   memberIds: string[];
   guests: string[];
   links: Array<{ label: string; url: string }>;
+}
+
+export interface UpdateEventInput {
+  name?: string;
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string | null;
+  locationName?: string | null;
+  locationAddress?: string | null;
+  mapsUrl?: string | null;
+  timeZone?: string | null;
+  links?: Array<{ label: string; url: string }>;
 }
 
 /** Carga real de gasto; la clave idempotente viaja fuera del body. */

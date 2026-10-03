@@ -1,16 +1,65 @@
-import { useQuery } from '@tanstack/react-query';
+import { Button } from '@heroui/react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { queries } from '../api/queries';
-import { ErrorMessage, Icon, StatusPanel } from '../components/ui';
+import { cabalesApi } from '../api/cabales-api';
+import { queries, queryKeys } from '../api/queries';
+import { useAuth } from '../auth/AuthProvider';
+import { ErrorMessage, Icon, StatusPanel, formatDate } from '../components/ui';
 import { formatMoney } from '../domain/money';
 import { participantLabel } from '../domain/participants';
 import { PageHeader } from './GroupPages';
 
-/** Reúne el padrón, enlaces y gastos filtrados del evento para mantenerlos alcanzables. */
+type RsvpStatus = 'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED';
+const rsvpLabels: Record<RsvpStatus, string> = {
+  PENDING: 'Pendiente',
+  GOING: 'Voy',
+  MAYBE: 'Tal vez',
+  DECLINED: 'No voy',
+};
+const reminderOptions = [1440, 60, 30, 15, 5];
+
+/** Detalle completo del evento: RSVP propio, asistentes, recordatorios y ciclo de vida. */
 export function EventDetailPage() {
   const { groupId = '', eventId = '' } = useParams();
+  const { session } = useAuth();
   const event = useQuery(queries.event(groupId, eventId));
+  const group = useQuery({
+    ...queries.group(groupId, session?.user.id ?? ''),
+    enabled: Boolean(session?.user.id),
+  });
   const expenses = useQuery(queries.expenses(groupId));
+  const queryClient = useQueryClient();
+  const [reminders, setReminders] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (event.data)
+      setReminders(
+        event.data.reminders?.filter((item) => item.enabled).map((item) => item.minutesBefore) ??
+          [],
+      );
+  }, [event.data]);
+
+  const rsvpMutation = useMutation({
+    mutationFn: (status: RsvpStatus) => cabalesApi.rsvpEvent(groupId, eventId, status),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.event(groupId, eventId), updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events(groupId) });
+    },
+  });
+  const remindersMutation = useMutation({
+    mutationFn: () =>
+      cabalesApi.updateEventReminders(
+        groupId,
+        eventId,
+        reminders.map((minutesBefore) => ({ minutesBefore, enabled: true })),
+      ),
+    onSuccess: (updated) => queryClient.setQueryData(queryKeys.event(groupId, eventId), updated),
+  });
+  const configuredReminderOptions = useMemo(
+    () => [...new Set([...reminderOptions, ...reminders])].sort((a, b) => b - a),
+    [reminders],
+  );
 
   if (event.isPending)
     return (
@@ -25,43 +74,132 @@ export function EventDetailPage() {
       </StatusPanel>
     );
 
+  const eventData = event.data;
+  const attendees = eventData.participants ?? [];
+  const counts = eventData.rsvpCounts ?? { PENDING: 0, GOING: 0, MAYBE: 0, DECLINED: 0 };
+  const currentParticipant = attendees.find(
+    (participant) => participant.groupMember?.user?.id === session?.user.id,
+  );
+  const canManage = Boolean(
+    eventData.createdById === session?.user.id ||
+    ['OWNER', 'ADMIN'].includes(group.data?.currentRole ?? ''),
+  );
+  const canAddExpense = eventData.status === 'OPEN' && !eventData.settlement;
   const eventExpenses = (expenses.data ?? []).filter((expense) => expense.eventId === eventId);
-  const canAddExpense = event.data.status === 'OPEN' && !event.data.settlement;
-
   return (
     <PageHeader
-      eyebrow={eventStatusLabel(event.data.status)}
-      title={event.data.name}
+      eyebrow={eventStatusLabel(eventData.status)}
+      title={eventData.name}
       action={
-        canAddExpense ? (
-          <Link
-            className="button primary"
-            to={`/app/groups/${groupId}/events/${eventId}/expenses/new`}
-          >
-            <Icon name="plus" /> Añadir gasto
-          </Link>
-        ) : undefined
+        <div className="button-row">
+          {canManage && (
+            <Link className="button quiet" to={`/app/groups/${groupId}/events/${eventId}/edit`}>
+              Editar
+            </Link>
+          )}
+          {canAddExpense && (
+            <Link
+              className="button primary"
+              to={`/app/groups/${groupId}/events/${eventId}/expenses/new`}
+            >
+              <Icon name="plus" /> Añadir gasto
+            </Link>
+          )}
+        </div>
       }
     >
-      <div className="summary-grid">
-        <article className="members-card glass-panel">
-          <h2>Participantes</h2>
-          <ul>
-            {(event.data.participants ?? []).map((participant) => (
-              <li key={participant.id}>
-                <span className="avatar" aria-hidden="true">
-                  {participantLabel(participant).slice(0, 1).toUpperCase()}
-                </span>
-                <strong>{participantLabel(participant)}</strong>
-              </li>
+      <section className="event-overview glass-panel">
+        <p>{eventData.description || 'Sin descripción'}</p>
+        <dl className="event-facts">
+          <div>
+            <dt>Inicio</dt>
+            <dd>{formatDate(eventData.startsAt, true)}</dd>
+          </div>
+          {eventData.endsAt && (
+            <div>
+              <dt>Fin</dt>
+              <dd>{formatDate(eventData.endsAt, true)}</dd>
+            </div>
+          )}
+          {(eventData.locationName || eventData.locationAddress) && (
+            <div>
+              <dt>Lugar</dt>
+              <dd>
+                {[eventData.locationName, eventData.locationAddress].filter(Boolean).join(' · ')}
+              </dd>
+            </div>
+          )}
+          {eventData.timeZone && (
+            <div>
+              <dt>Zona horaria</dt>
+              <dd>{eventData.timeZone}</dd>
+            </div>
+          )}
+        </dl>
+        {eventData.mapsUrl && (
+          <a href={eventData.mapsUrl} target="_blank" rel="noreferrer">
+            Abrir ubicación en Maps
+          </a>
+        )}
+      </section>
+
+      {currentParticipant && eventData.status !== 'CANCELLED' && (
+        <section className="members-card glass-panel" aria-labelledby="rsvp-title">
+          <h2 id="rsvp-title">¿Vas a asistir?</h2>
+          <p className="muted" aria-live="polite">
+            Estado actual: {rsvpLabels[currentParticipant.rsvpStatus]}
+          </p>
+          <div className="rsvp-grid" role="group" aria-label="Estado de asistencia">
+            {(Object.keys(rsvpLabels) as RsvpStatus[]).map((status) => (
+              <Button
+                key={status}
+                variant={currentParticipant.rsvpStatus === status ? 'primary' : 'tertiary'}
+                type="button"
+                aria-pressed={currentParticipant.rsvpStatus === status}
+                isDisabled={rsvpMutation.isPending}
+                onPress={() => rsvpMutation.mutate(status)}
+              >
+                {rsvpLabels[status]}
+              </Button>
             ))}
-          </ul>
-        </article>
-        <article className="members-card glass-panel event-links">
-          <h2>Enlaces</h2>
-          {event.data.links?.length ? (
+          </div>
+          {rsvpMutation.isError && <ErrorMessage error={rsvpMutation.error} />}
+        </section>
+      )}
+
+      <div className="summary-grid">
+        <section className="members-card glass-panel" aria-labelledby="attendees-title">
+          <h2 id="attendees-title">Asistencia</h2>
+          <div className="rsvp-counts" aria-label="Recuento de asistencia">
+            {(Object.keys(rsvpLabels) as RsvpStatus[]).map((status) => (
+              <span key={status}>
+                <strong>{counts[status]}</strong> {rsvpLabels[status]}
+              </span>
+            ))}
+          </div>
+          {(Object.keys(rsvpLabels) as RsvpStatus[]).map((status) => (
+            <div className="attendee-group" key={status}>
+              <h3>{rsvpLabels[status]}</h3>
+              <ul>
+                {attendees
+                  .filter((participant) => participant.rsvpStatus === status)
+                  .map((participant) => (
+                    <li key={participant.id}>
+                      <span className="avatar" aria-hidden="true">
+                        {participantLabel(participant).slice(0, 1).toUpperCase()}
+                      </span>
+                      <strong>{participantLabel(participant)}</strong>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+        <section className="members-card glass-panel event-links" aria-labelledby="links-title">
+          <h2 id="links-title">Enlaces</h2>
+          {eventData.links?.length ? (
             <ul>
-              {event.data.links.map((link) => (
+              {eventData.links.map((link) => (
                 <li key={link.id}>
                   <a href={link.url} target="_blank" rel="noreferrer">
                     {link.label}
@@ -72,8 +210,67 @@ export function EventDetailPage() {
           ) : (
             <p className="muted">Sin enlaces asociados.</p>
           )}
-        </article>
+        </section>
       </div>
+
+      {canManage && eventData.status !== 'CANCELLED' && (
+        <section className="members-card glass-panel" aria-labelledby="reminders-title">
+          <h2 id="reminders-title">Recordatorios</h2>
+          <p className="muted">
+            Se enviarán a integrantes pendientes, con “voy” o “tal vez”, según sus preferencias.
+          </p>
+          <div className="reminder-options">
+            {configuredReminderOptions.map((minutes) => (
+              <label key={minutes} className="participant">
+                <span>{formatReminder(minutes)}</span>
+                <input
+                  type="checkbox"
+                  checked={reminders.includes(minutes)}
+                  onChange={(change) =>
+                    setReminders((current) =>
+                      change.target.checked
+                        ? [...current, minutes]
+                        : current.filter((value) => value !== minutes),
+                    )
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <Button
+            variant="primary"
+            type="button"
+            isDisabled={remindersMutation.isPending || reminders.length > 5}
+            onPress={() => remindersMutation.mutate()}
+          >
+            {remindersMutation.isPending ? 'Guardando…' : 'Guardar recordatorios'}
+          </Button>
+          {reminders.length > 5 && (
+            <p className="form-error" role="alert">
+              Puedes elegir como máximo 5 recordatorios.
+            </p>
+          )}
+          {remindersMutation.isError && <ErrorMessage error={remindersMutation.error} />}
+        </section>
+      )}
+
+      {(canManage || eventData.status === 'CANCELLED') && (
+        <EventActions
+          canManage={canManage}
+          groupId={groupId}
+          eventId={eventId}
+          cancelled={eventData.status === 'CANCELLED'}
+          onCancelled={(updated) => {
+            queryClient.setQueryData(queryKeys.event(groupId, eventId), updated);
+            void queryClient.invalidateQueries({ queryKey: queryKeys.events(groupId) });
+          }}
+          onDeleted={() => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.events(groupId) });
+            window.location.assign(`/app/groups/${groupId}/events`);
+          }}
+        />
+      )}
+
       <h2 className="section-title">Gastos</h2>
       {expenses.isPending && <p className="muted">Cargando gastos…</p>}
       {expenses.isError && <ErrorMessage error={expenses.error} />}
@@ -113,7 +310,67 @@ export function EventDetailPage() {
   );
 }
 
-/** Traduce estados persistidos a etiquetas de interfaz sin alterar el valor del contrato. */
+function EventActions({
+  canManage,
+  groupId,
+  eventId,
+  cancelled,
+  onCancelled,
+  onDeleted,
+}: {
+  canManage: boolean;
+  groupId: string;
+  eventId: string;
+  cancelled: boolean;
+  onCancelled: (event: Awaited<ReturnType<typeof cabalesApi.cancelEvent>>) => void;
+  onDeleted: () => void;
+}) {
+  const cancelMutation = useMutation({
+    mutationFn: () => cabalesApi.cancelEvent(groupId, eventId),
+    onSuccess: onCancelled,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => cabalesApi.deleteEvent(groupId, eventId),
+    onSuccess: onDeleted,
+  });
+  if (!canManage) return null;
+  return (
+    <section className="button-row event-danger-actions" aria-label="Acciones del evento">
+      {!cancelled && (
+        <Button
+          variant="tertiary"
+          type="button"
+          isDisabled={cancelMutation.isPending}
+          onPress={() => window.confirm('¿Cancelar este evento?') && cancelMutation.mutate()}
+        >
+          Cancelar evento
+        </Button>
+      )}
+      <Button
+        variant="tertiary"
+        type="button"
+        isDisabled={deleteMutation.isPending}
+        onPress={() =>
+          window.confirm(
+            '¿Eliminar este evento? Solo se puede si no tiene gastos ni liquidación.',
+          ) && deleteMutation.mutate()
+        }
+      >
+        Eliminar evento
+      </Button>
+      {(cancelMutation.isError || deleteMutation.isError) && (
+        <ErrorMessage error={cancelMutation.error || deleteMutation.error} />
+      )}
+    </section>
+  );
+}
+
+function formatReminder(minutes: number): string {
+  if (minutes % 1440 === 0) return `${minutes / 1440} día${minutes === 1440 ? '' : 's'} antes`;
+  if (minutes % 60 === 0) return `${minutes / 60} hora${minutes === 60 ? '' : 's'} antes`;
+  return `${minutes} minutos antes`;
+}
+
 function eventStatusLabel(status: 'OPEN' | 'CLOSED' | 'CANCELLED'): string {
   if (status === 'OPEN') return 'Evento abierto';
   if (status === 'CLOSED') return 'Evento cerrado';

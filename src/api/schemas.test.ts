@@ -80,12 +80,20 @@ describe('adaptadores de respuesta', () => {
       name: 'Cena',
       description: null,
       startsAt: timestamp,
+      endsAt: null,
+      locationName: null,
+      locationAddress: null,
+      mapsUrl: null,
+      timeZone: null,
       status: 'OPEN',
+      createdById: ids.user,
       createdAt: timestamp,
       participants: [
         {
           id: ids.participant,
           guestName: null,
+          rsvpStatus: 'PENDING',
+          respondedAt: null,
           groupMember: {
             id: ids.member,
             user: { id: ids.user, displayName: 'Ana', avatarUrl: null },
@@ -93,6 +101,8 @@ describe('adaptadores de respuesta', () => {
         },
       ],
       links: [],
+      reminders: [],
+      rsvpCounts: { PENDING: 1, GOING: 0, MAYBE: 0, DECLINED: 0 },
       settlement: null,
       _count: { expenses: 1 },
     });
@@ -149,6 +159,34 @@ describe('adaptadores de respuesta', () => {
       eventParticipantId: ids.participant,
       amountCents: 2500,
     });
+  });
+
+  it('valida la forma P3 de RSVP, ubicación y recordatorios', () => {
+    const parsed = eventDetailSchema.parse({
+      id: ids.event,
+      groupId: ids.group,
+      name: 'Cena',
+      description: null,
+      startsAt: timestamp,
+      endsAt: null,
+      locationName: 'Lugar real',
+      locationAddress: null,
+      mapsUrl: 'https://maps.google.com/?q=Cabales',
+      timeZone: 'America/El_Salvador',
+      status: 'OPEN',
+      createdById: ids.user,
+      createdAt: timestamp,
+      participants: [],
+      links: [],
+      reminders: [{ id: ids.participant, minutesBefore: 60, enabled: true }],
+      rsvpCounts: { PENDING: 0, GOING: 0, MAYBE: 0, DECLINED: 0 },
+      settlement: null,
+      _count: { expenses: 0 },
+    });
+    expect(parsed.reminders[0]?.minutesBefore).toBe(60);
+    expect(eventDetailSchema.safeParse({ ...parsed, rsvpCounts: { PENDING: -1 } }).success).toBe(
+      false,
+    );
   });
 
   it('distingue resúmenes de cierre, detalles y estados de transferencia', () => {

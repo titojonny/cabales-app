@@ -227,3 +227,44 @@ test('crea un gasto con porcentaje y muestra la suma accesible', async ({ page }
     { eventParticipantId: responses.eventDetail.participants[1].id, percentageBps: 4000 },
   ]);
 });
+
+test('gestiona RSVP y abre la edición completa de un evento', async ({ page }) => {
+  const groupId = responses.group.id;
+  const eventId = responses.event.id;
+  const calls: string[] = [];
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    let data: unknown = [];
+    if (pathname.endsWith('/auth/me')) data = responses.me;
+    else if (pathname === '/api/v1/groups') data = [responses.group];
+    else if (pathname === `/api/v1/groups/${groupId}`) data = responses.groupDetail;
+    else if (pathname === `/api/v1/groups/${groupId}/events/${eventId}`) {
+      if (request.method() === 'PATCH') calls.push(request.method() + ' ' + pathname);
+      data = responses.eventDetail;
+    } else if (pathname === `/api/v1/groups/${groupId}/expenses`) data = [];
+    else if (
+      pathname === `/api/v1/groups/${groupId}/events/${eventId}/rsvp` &&
+      request.method() === 'PUT'
+    ) {
+      calls.push(request.method() + ' ' + pathname);
+      data = responses.eventDetail;
+    } else if (pathname === '/api/v1/notifications/unread-count') data = { unread: 0 };
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data }),
+    });
+  });
+  await page.goto(`/app/groups/${groupId}/events/${eventId}`);
+  await expect(page.getByRole('heading', { name: '¿Vas a asistir?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Voy', exact: true }).click();
+  await expect.poll(() => calls.length).toBe(1);
+  await page.getByRole('link', { name: 'Editar' }).click();
+  await expect(page.getByRole('heading', { name: /Editar Evento/ })).toBeVisible();
+  await expect(page.getByLabel('Fecha y hora de fin')).toBeVisible();
+  await page.getByLabel('Nombre').fill('Evento actualizado');
+  await page.getByRole('button', { name: 'Guardar cambios' }).click();
+  await expect.poll(() => calls.filter((call) => call.startsWith('PATCH')).length).toBe(1);
+  await expectNoHorizontalScroll(page);
+});

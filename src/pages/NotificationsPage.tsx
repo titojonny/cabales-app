@@ -30,6 +30,7 @@ const typeLabel: Record<NotificationType, string> = {
   'ocr.finished': 'Lectura de comprobantes',
   'privacy.updated': 'Solicitudes de privacidad',
   'achievement.unlocked': 'Logros',
+  'event.reminder': 'Recordatorios de eventos',
 };
 
 /** Destino interno de un aviso; solo rutas propias, nunca URLs recibidas. */
@@ -52,6 +53,8 @@ function notificationLink(notification: Notification): string | undefined {
   if (notification.type === 'ocr.finished') return '/app/docs';
   if (notification.type === 'privacy.updated') return '/app/mas#privacidad';
   if (notification.type === 'achievement.unlocked') return '/app/achievements';
+  if (notification.type === 'event.reminder' && groupId && value('eventId'))
+    return `/app/groups/${groupId}/events/${value('eventId')}`;
   return undefined;
 }
 

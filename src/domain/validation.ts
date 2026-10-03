@@ -62,42 +62,102 @@ export const groupSchema = z.object({
 });
 
 /** Esquema de evento con fecha ISO transformada desde un control local. */
-export const eventSchema = z.object({
-  name: normalizedText(2, 160, 'El nombre'),
-  description: z
-    .string()
-    .transform(normalizeText)
-    .pipe(z.string().max(1000, 'La descripción no puede superar 1000 caracteres.'))
-    .optional(),
-  startsAt: z.string().min(1, 'Selecciona la fecha y hora.'),
-  memberIds: z
-    .array(z.string().uuid())
-    .max(100)
-    .refine((ids) => new Set(ids).size === ids.length, {
-      message: 'No repitas integrantes.',
-    }),
-  guests: z
-    .array(normalizedText(1, 120, 'El nombre del invitado'))
-    .max(100)
-    .refine(
-      (names) => new Set(names.map((name) => name.toLocaleLowerCase('es'))).size === names.length,
-      { message: 'No repitas invitados.' },
-    ),
-  links: z
-    .array(
-      z.object({
-        label: normalizedText(1, 80, 'La etiqueta'),
-        url: z
-          .string()
-          .url('Escribe un enlace válido.')
-          .max(2048)
-          .refine((url) => ['http:', 'https:'].includes(new URL(url).protocol), {
-            message: 'El enlace debe usar http o https.',
-          }),
+export const eventSchema = z
+  .object({
+    name: normalizedText(2, 160, 'El nombre'),
+    description: z
+      .string()
+      .transform(normalizeText)
+      .pipe(z.string().max(1000, 'La descripción no puede superar 1000 caracteres.'))
+      .optional(),
+    startsAt: z.string().min(1, 'Selecciona la fecha y hora.'),
+    endsAt: z.string().optional(),
+    locationName: z.string().transform(normalizeText).pipe(z.string().max(160)).optional(),
+    locationAddress: z.string().transform(normalizeText).pipe(z.string().max(500)).optional(),
+    mapsUrl: z
+      .string()
+      .refine((value) => !value || /^https:\/\//.test(value), 'Maps debe usar HTTPS.')
+      .optional(),
+    timeZone: z.string().max(80).optional(),
+    memberIds: z
+      .array(z.string().uuid())
+      .max(100)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: 'No repitas integrantes.',
       }),
-    )
-    .max(20),
-});
+    guests: z
+      .array(normalizedText(1, 120, 'El nombre del invitado'))
+      .max(100)
+      .refine(
+        (names) => new Set(names.map((name) => name.toLocaleLowerCase('es'))).size === names.length,
+        { message: 'No repitas invitados.' },
+      ),
+    links: z
+      .array(
+        z.object({
+          label: normalizedText(1, 80, 'La etiqueta'),
+          url: z
+            .string()
+            .url('Escribe un enlace válido.')
+            .max(2048)
+            .refine((url) => ['http:', 'https:'].includes(new URL(url).protocol), {
+              message: 'El enlace debe usar http o https.',
+            }),
+        }),
+      )
+      .max(20),
+  })
+  .superRefine((value, context) => {
+    if (value.endsAt && new Date(value.endsAt).getTime() < new Date(value.startsAt).getTime()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endsAt'],
+        message: 'La fecha de fin debe ser posterior o igual al inicio.',
+      });
+    }
+  });
+
+/** Campos editables de evento, incluidos enlaces y ubicación. */
+export const eventEditSchema = z
+  .object({
+    name: normalizedText(2, 160, 'El nombre'),
+    description: z
+      .string()
+      .transform(normalizeText)
+      .pipe(z.string().max(1000, 'La descripción no puede superar 1000 caracteres.')),
+    startsAt: z.string().min(1, 'Selecciona la fecha y hora.'),
+    endsAt: z.string().optional(),
+    locationName: z.string().transform(normalizeText).pipe(z.string().max(160)).optional(),
+    locationAddress: z.string().transform(normalizeText).pipe(z.string().max(500)).optional(),
+    mapsUrl: z
+      .string()
+      .refine((value) => !value || /^https:\/\//.test(value), 'Maps debe usar HTTPS.')
+      .optional(),
+    timeZone: z.string().max(80).optional(),
+    links: z
+      .array(
+        z.object({
+          label: normalizedText(1, 80, 'La etiqueta'),
+          url: z
+            .string()
+            .url('Escribe un enlace válido.')
+            .max(2048)
+            .refine((url) => ['http:', 'https:'].includes(new URL(url).protocol), {
+              message: 'El enlace debe usar http o https.',
+            }),
+        }),
+      )
+      .max(20),
+  })
+  .superRefine((value, context) => {
+    if (value.endsAt && new Date(value.endsAt).getTime() < new Date(value.startsAt).getTime()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endsAt'],
+        message: 'La fecha de fin debe ser posterior o igual al inicio.',
+      });
+    }
+  });
 
 /** Esquema de invitación limitado a roles delegables por la API. */
 export const invitationSchema = z.object({
@@ -191,6 +251,7 @@ export type RegisterValues = z.infer<typeof registerSchema>;
 export type GroupValues = z.infer<typeof groupSchema>;
 /** Valores validados al crear un evento. */
 export type EventValues = z.infer<typeof eventSchema>;
+export type EventEditValues = z.infer<typeof eventEditSchema>;
 /** Valores validados por el divisor manual. */
 export type ExpenseValues = z.infer<typeof expenseSchema>;
 /** Valores validados al crear una invitación. */
