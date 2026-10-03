@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Símbolo de Cabales</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7567ff"/>
+      <stop offset="1" stop-color="#22d3b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#10142c"/>
+  <circle cx="256" cy="256" r="174" fill="url(#bg)" opacity=".2"/>
+  <path d="M329 180c-22-20-48-30-78-30-63 0-109 45-109 106 0 62 46 107 109 107 31 0 59-11 80-32l-36-39c-12 12-26 18-43 18-30 0-51-22-51-54 0-31 21-53 51-53 16 0 30 6 42 17z" fill="#f8f9ff"/>
+  <path d="M276 237h98v43h-98z" fill="#ff8d72"/>
+</svg>

@@ -1,0 +1,42 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toast } from '@heroui/react';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { App } from './App';
+import { AuthProvider } from './auth/AuthProvider';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { NetworkStatus } from './components/NetworkStatus';
+import './styles.css';
+
+/** Reintenta consultas una vez; mutaciones no reintentan salvo flujos financieros idempotentes. */
+/** Cliente compartido que conserva consultas remotas sin persistir datos privados. */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 20_000, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+});
+
+/** Punto de montaje único de la aplicación; falla explícitamente si falta el shell HTML. */
+const root = document.getElementById('root');
+if (!root) throw new Error('No se encontró el contenedor principal de Cabales.');
+
+createRoot(root).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <a className="skip-link" href="#contenido">
+            Saltar al contenido
+          </a>
+          <NetworkStatus />
+          <Toast.Provider placement="top end" maxVisibleToasts={4} />
+          <AppErrorBoundary>
+            <App />
+          </AppErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </StrictMode>,
+);
