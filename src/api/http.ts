@@ -70,6 +70,7 @@ export interface RequestOptions<T> extends Omit<RequestInit, 'body'> {
 export interface ResponseMeta {
   nextCursor?: string | null;
   idempotencyReplayed?: boolean;
+  total?: number;
 }
 
 export interface FileResponse {

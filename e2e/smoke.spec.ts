@@ -1,4 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+test.use({ serviceWorkers: 'block' });
+
+async function mockUnauthenticatedSession(page: Page) {
+  await page.route('**/api/v1/auth/me', async (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: false,
+        error: { code: 'SESSION_INVALID', message: 'Sesión inválida' },
+      }),
+    }),
+  );
+}
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/auth/config', async (route) =>
@@ -21,6 +36,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('la entrada pública presenta Cabales y permite ir al acceso', async ({ page }) => {
+  await mockUnauthenticatedSession(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /cuentas claras/i })).toBeVisible();
   await page
@@ -33,6 +49,7 @@ test('la entrada pública presenta Cabales y permite ir al acceso', async ({ pag
 test('el registro aplica la política real de contraseña antes de llamar a la API', async ({
   page,
 }) => {
+  await mockUnauthenticatedSession(page);
   await page.goto('/register');
   await page.getByLabel('Nombre').fill('Ana');
   await page.getByLabel('Correo').fill('ana@example.com');

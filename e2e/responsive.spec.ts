@@ -92,7 +92,14 @@ test('las páginas principales no desbordan horizontalmente en cada viewport', a
     await expectNoHorizontalScroll(page);
   }
 
-  for (const path of ['/app', '/app/groups', '/app/cabudas', '/app/notifications', '/app/mas']) {
+  for (const path of [
+    '/app',
+    '/app/groups',
+    '/app/expenses',
+    '/app/cabudas',
+    '/app/notifications',
+    '/app/mas',
+  ]) {
     await page.goto(path);
     await expect(page.locator('#contenido')).toBeVisible();
     await expectNoHorizontalScroll(page);
@@ -154,6 +161,15 @@ test('muestra el estado offline y no intenta encolar un ingreso', async ({ page,
   await page.getByLabel('Categoría del ingreso').fill('Prueba');
   await expect(page.getByRole('button', { name: 'Sin conexión' })).toBeDisabled();
   await context.setOffline(false);
+});
+
+test('Mis gastos muestra filtros personales y gestion de recurrentes', async ({ page }) => {
+  await mockPrivateApi(page);
+  await page.goto('/app/expenses');
+  await expect(page.getByRole('heading', { name: 'Mis gastos' })).toBeVisible();
+  await expect(page.getByLabel('Desde')).toBeVisible();
+  await expect(page.getByLabel('Hasta')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Gastos recurrentes' })).toBeVisible();
 });
 
 test('abre un gasto con los datos del OCR prellenados y editables', async ({ page }) => {

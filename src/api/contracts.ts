@@ -120,6 +120,7 @@ export interface Expense {
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
+  tags?: Array<{ id: string; name: string }>;
   participants: ExpenseParticipant[];
   payers: Array<{ id: string; eventParticipantId: string; amountCents: number }>;
   items: ExpenseItem[];
@@ -148,6 +149,7 @@ export interface ExpenseSummary {
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
+  tags?: Array<{ id: string; name: string }>;
   participantCount: number;
   itemCount: number;
 }
@@ -310,4 +312,5 @@ export interface CreateExpenseInput {
     quantity: number;
     allocations: Array<{ eventParticipantId: string; amountCents: number }>;
   }>;
+  tagIds?: string[];
 }

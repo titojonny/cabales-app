@@ -316,6 +316,14 @@ const rawExpenseParticipant = z.strictObject({
     groupMemberId: id.nullable(),
   }),
 });
+const rawExpenseTag = z.strictObject({
+  tag: z.strictObject({
+    id,
+    name: z.string(),
+    groupId: id.nullable().optional(),
+    ownerUserId: id.nullable().optional(),
+  }),
+});
 
 /** Valida y adapta los gastos reducidos de `GET /groups/:groupId/expenses`. */
 export const expenseListSchema = z
@@ -333,6 +341,7 @@ export const expenseListSchema = z
       occurredAt: date,
       createdAt: date,
       categoryId: id.nullable().optional(),
+      tags: z.array(rawExpenseTag).optional(),
       _count: z.strictObject({
         participants: z.number().int().nonnegative(),
         items: z.number().int().nonnegative(),
@@ -353,6 +362,7 @@ export const expenseListSchema = z
       occurredAt: expense.occurredAt,
       createdAt: expense.createdAt,
       categoryId: expense.categoryId ?? undefined,
+      tags: (expense.tags ?? []).map(({ tag }) => tag),
       participantCount: expense._count.participants,
       itemCount: expense._count.items,
     })),
@@ -375,6 +385,9 @@ export const expenseDetailSchema = z
     occurredAt: date,
     createdAt: date,
     categoryId: id.nullable().optional(),
+    ownerUserId: id.nullable().optional(),
+    recurringExpenseId: id.nullable().optional(),
+    tags: z.array(rawExpenseTag).optional(),
     participants: z.array(rawExpenseParticipant),
     payers: z.array(
       z.strictObject({
@@ -413,6 +426,7 @@ export const expenseDetailSchema = z
     occurredAt: expense.occurredAt,
     createdAt: expense.createdAt,
     categoryId: expense.categoryId ?? undefined,
+    tags: (expense.tags ?? []).map(({ tag }) => tag),
     participants: expense.participants.map((participant) => ({
       ...participant,
       subtotalCents: participant.subtotalCents ?? participant.shareCents,

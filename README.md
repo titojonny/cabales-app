@@ -181,8 +181,17 @@ Limitaciones conocidas del MVP:
 - Los nombres registrados en detalles financieros se enriquecen consultando el evento; si esa consulta falla, se presenta `Participante` con ID corto sin inventar identidad.
 
 El inventario de documentación por archivo está en `DOCUMENTACION.md`.
+
 # P7: consulta offline y exportaciones
 
 Estadísticas muestra comparación con el periodo equivalente anterior, proyección mensual marcada como estimación, ingresos personales, saldo mensual, fondos y exportación CSV/PDF/PNG. El PDF lo genera la API; el PNG se dibuja en el canvas nativo con el resumen ya cargado.
 
 La persistencia offline usa el caché de TanStack Query serializado en IndexedDB por usuario. Solo se guardan consultas allowlisted de grupos, gastos/estadísticas, Cabudas, ingresos y logros; la sesión, tokens, documentos, OCR, privacidad y mutaciones no se persisten. El límite es 2 MiB y la caducidad 7 días. La caché se elimina al cerrar sesión o cambiar de usuario. Las mutaciones detectan `navigator.onLine === false`, muestran un mensaje claro y nunca encolan pagos. El service worker conserva `NetworkOnly` para `/api/v1`.
+
+## P4: Mis gastos
+
+Las pruebas E2E de P4 bloquean el service worker y mockean las respuestas validas de la sesion; asi el shell se verifica sin depender de un API local en el puerto 3000.
+
+La pantalla incluye filtros por mes, rango, categoria, etiqueta y texto; tambien permite administrar categorias y etiquetas personales. Los recurrentes muestran su proxima ejecucion y acciones de pausa, reanudacion y eliminacion.
+
+`/app/expenses` consume los contratos Zod de `src/api/module-schemas.ts` para mostrar exclusivamente los gastos personales en la pantalla de alta y filtros. La API también permite consultar el historial unificado con `scope=ALL|PERSONAL|GROUPS`, cursor y total del filtro. Las etiquetas se gestionan desde la misma sección y el selector de gasto grupal usa etiquetas con alcance validado por la API.

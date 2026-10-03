@@ -10,6 +10,12 @@ import {
   cabudasSummarySchema,
   categoryListSchema,
   categorySchema,
+  personalExpenseListSchema,
+  personalExpenseSchema,
+  recurringExpenseListSchema,
+  recurringExpenseSchema,
+  tagListSchema,
+  tagSchema,
   createdMovementSchema,
   documentGrantListSchema,
   documentGrantSchema,
@@ -120,6 +126,52 @@ export const modulesApi = {
     }),
   deleteCategory: (groupId: string, categoryId: string) =>
     request(`/groups/${enc(groupId)}/categories/${enc(categoryId)}`, { method: 'DELETE' }),
+
+  // Gastos personales, historial y etiquetas P4.
+  personalCategories: () => request('/categories', { schema: categoryListSchema }),
+  createPersonalCategory: (input: { name: string; color?: string }) => request('/categories', { method: 'POST', body: input, schema: categorySchema }),
+  updatePersonalCategory: (id: string, input: { name?: string; color?: string }) => request(`/categories/${enc(id)}`, { method: 'PATCH', body: input, schema: categorySchema }),
+  deletePersonalCategory: (id: string) => request(`/categories/${enc(id)}`, { method: 'DELETE' }),
+  personalExpenses: (filters: {
+    month?: string;
+    from?: string;
+    to?: string;
+    categoryId?: string;
+    tagId?: string;
+    groupId?: string;
+    text?: string;
+    scope?: 'ALL' | 'PERSONAL' | 'GROUPS';
+    cursor?: string;
+    limit?: number;
+  } = {}) => requestWithMeta(`/expenses${toQuery(filters)}`, { schema: personalExpenseListSchema }),
+  createPersonalExpense: (
+    input: { title: string; notes?: string; categoryId?: string; tagIds: string[]; totalCents: number; currency: string; occurredAt: string },
+    idempotencyKey: string,
+  ) => request('/expenses', { method: 'POST', body: input, idempotencyKey, schema: personalExpenseSchema }),
+  updatePersonalExpense: (expenseId: string, input: Record<string, unknown>) =>
+    request(`/expenses/${enc(expenseId)}`, { method: 'PATCH', body: input, schema: personalExpenseSchema }),
+  deletePersonalExpense: (expenseId: string) => request(`/expenses/${enc(expenseId)}`, { method: 'DELETE' }),
+  personalTags: () => request('/tags', { schema: tagListSchema }),
+  createPersonalTag: (name: string) => request('/tags', { method: 'POST', body: { name }, schema: tagSchema }),
+  updatePersonalTag: (tagId: string, name: string) => request(`/tags/${enc(tagId)}`, { method: 'PATCH', body: { name }, schema: tagSchema }),
+  deletePersonalTag: (tagId: string) => request(`/tags/${enc(tagId)}`, { method: 'DELETE' }),
+  groupTags: (groupId: string) => request(`/groups/${enc(groupId)}/tags`, { schema: tagListSchema }),
+  createGroupTag: (groupId: string, name: string) => request(`/groups/${enc(groupId)}/tags`, { method: 'POST', body: { name }, schema: tagSchema }),
+  updateGroupTag: (groupId: string, tagId: string, name: string) => request(`/groups/${enc(groupId)}/tags/${enc(tagId)}`, { method: 'PATCH', body: { name }, schema: tagSchema }),
+  deleteGroupTag: (groupId: string, tagId: string) => request(`/groups/${enc(groupId)}/tags/${enc(tagId)}`, { method: 'DELETE' }),
+
+  // Gastos recurrentes.
+  personalRecurring: () => request('/recurring-expenses', { schema: recurringExpenseListSchema }),
+  createPersonalRecurring: (input: Record<string, unknown>) => request('/recurring-expenses', { method: 'POST', body: input, schema: recurringExpenseSchema }),
+  updatePersonalRecurring: (id: string, input: Record<string, unknown>) => request(`/recurring-expenses/${enc(id)}`, { method: 'PATCH', body: input, schema: recurringExpenseSchema }),
+  pausePersonalRecurring: (id: string) => request(`/recurring-expenses/${enc(id)}/pause`, { method: 'POST', schema: recurringExpenseSchema }),
+  resumePersonalRecurring: (id: string) => request(`/recurring-expenses/${enc(id)}/resume`, { method: 'POST', schema: recurringExpenseSchema }),
+  deletePersonalRecurring: (id: string) => request(`/recurring-expenses/${enc(id)}`, { method: 'DELETE' }),
+  groupRecurring: (groupId: string) => request(`/groups/${enc(groupId)}/recurring-expenses`, { schema: recurringExpenseListSchema }),
+  createGroupRecurring: (groupId: string, input: Record<string, unknown>) => request(`/groups/${enc(groupId)}/recurring-expenses`, { method: 'POST', body: input, schema: recurringExpenseSchema }),
+  pauseGroupRecurring: (groupId: string, id: string) => request(`/groups/${enc(groupId)}/recurring-expenses/${enc(id)}/pause`, { method: 'POST', schema: recurringExpenseSchema }),
+  resumeGroupRecurring: (groupId: string, id: string) => request(`/groups/${enc(groupId)}/recurring-expenses/${enc(id)}/resume`, { method: 'POST', schema: recurringExpenseSchema }),
+  deleteGroupRecurring: (groupId: string, id: string) => request(`/groups/${enc(groupId)}/recurring-expenses/${enc(id)}`, { method: 'DELETE' }),
 
   // Presupuestos.
   budgets: (groupId: string) =>
