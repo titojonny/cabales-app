@@ -10,7 +10,7 @@ export const queryKeys = {
   event: (groupId: string, eventId: string) => ['groups', groupId, 'events', eventId] as const,
   expense: (groupId: string, expenseId: string) =>
     ['groups', groupId, 'expenses', expenseId] as const,
-  expenses: (groupId: string) => ['groups', groupId, 'expenses'] as const,
+  expenses: (groupId: string, filters: Record<string, string | undefined> = {}) => ['groups', groupId, 'expenses', filters] as const,
   settlements: (groupId: string) => ['groups', groupId, 'settlements'] as const,
   settlement: (groupId: string, settlementId: string) =>
     ['groups', groupId, 'settlements', settlementId] as const,
@@ -41,10 +41,10 @@ export const queries = {
       queryKey: queryKeys.expense(groupId, expenseId),
       queryFn: () => cabalesApi.expense(groupId, expenseId),
     }),
-  expenses: (groupId: string) =>
+  expenses: (groupId: string, filters: Record<string, string | undefined> = {}) =>
     queryOptions({
-      queryKey: queryKeys.expenses(groupId),
-      queryFn: () => cabalesApi.expenses(groupId),
+      queryKey: queryKeys.expenses(groupId, filters),
+      queryFn: () => cabalesApi.expenses(groupId, filters),
     }),
   settlements: (groupId: string) =>
     queryOptions({

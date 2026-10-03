@@ -23,6 +23,61 @@ export const categorySchema = z.object({
 });
 export const categoryListSchema = z.array(categorySchema);
 
+export const tagSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  ownerUserId: id.nullable(),
+  name: z.string().min(1).max(50),
+});
+export const tagListSchema = z.array(tagSchema);
+
+const expenseTagSchema = z.object({ id, name: z.string(), groupId: id.nullable().optional(), ownerUserId: id.nullable().optional() });
+export const personalExpenseSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  eventId: id.nullable(),
+  ownerUserId: id.nullable(),
+  title: z.string(),
+  notes: z.string().nullable(),
+  totalCents: int.positive(),
+  subtotalCents: int.nonnegative(),
+  taxCents: int.nonnegative(),
+  tipCents: int.nonnegative(),
+  currency,
+  splitMode: z.enum(['EQUAL', 'EXACT', 'PERCENT']),
+  occurredAt: date,
+  createdAt: date,
+  categoryId: id.nullable(),
+  category: z.object({ id, name: z.string(), color: z.string().nullable() }).nullable().optional(),
+  tags: z.array(z.object({ tag: expenseTagSchema })),
+  group: z.object({ id, name: z.string() }).nullable().optional(),
+  event: z.object({ id, name: z.string() }).nullable().optional(),
+});
+export const personalExpenseListSchema = z.array(personalExpenseSchema);
+export const recurringExpenseSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  eventId: id.nullable(),
+  ownerUserId: id.nullable(),
+  createdById: id.nullable(),
+  title: z.string(),
+  notes: z.string().nullable(),
+  amountCents: int.positive(),
+  currency,
+  categoryId: id.nullable(),
+  frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']),
+  chargeDay: int,
+  nextRunAt: date,
+  endsAt: nullableDate,
+  isActive: z.boolean(),
+  createdAt: date,
+  updatedAt: date,
+  category: z.object({ id, name: z.string(), color: z.string().nullable() }).nullable().optional(),
+  participants: z.array(z.object({ eventParticipantId: id, shareCents: int.nonnegative(), payerAmountCents: int.nonnegative().nullable() })),
+  tags: z.array(z.object({ tag: expenseTagSchema })),
+});
+export const recurringExpenseListSchema = z.array(recurringExpenseSchema);
+
 const alert = z.enum(['OK', 'WARNING', 'EXCEEDED']);
 const budgetProgress = z.object({
   periodStart: date,
@@ -359,6 +414,9 @@ export const privacyRequestSchema = z.object({
 export const privacyRequestListSchema = z.array(privacyRequestSchema);
 
 export type Category = z.output<typeof categorySchema>;
+export type Tag = z.output<typeof tagSchema>;
+export type PersonalExpense = z.output<typeof personalExpenseSchema>;
+export type RecurringExpense = z.output<typeof recurringExpenseSchema>;
 export type Budget = z.output<typeof budgetSchema>;
 export type BudgetDetail = z.output<typeof budgetDetailSchema>;
 export type BudgetAlert = z.output<typeof alert>;

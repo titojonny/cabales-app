@@ -27,6 +27,9 @@ const CreateExpensePage = lazy(() =>
 const ExpenseDetailPage = lazy(() =>
   import('./pages/ExpensePages').then(({ ExpenseDetailPage }) => ({ default: ExpenseDetailPage })),
 );
+const PersonalExpensesPage = lazy(() =>
+  import('./pages/PersonalExpensesPage').then(({ PersonalExpensesPage }) => ({ default: PersonalExpensesPage })),
+);
 const EventDetailPage = lazy(() =>
   import('./pages/EventDetailPage').then(({ EventDetailPage }) => ({ default: EventDetailPage })),
 );
@@ -121,6 +124,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppShell />}>
             <Route index element={<DashboardPage />} />
+            <Route path="expenses" element={<PersonalExpensesPage />} />
             <Route path="groups" element={<DashboardPage />} />
             <Route path="groups/new" element={<CreateGroupPage />} />
             <Route path="groups/:groupId" element={<GroupDetailPage tab="summary" />} />

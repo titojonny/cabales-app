@@ -17,6 +17,7 @@ import type {
   SettlementSummary,
 } from './contracts';
 import { request } from './http';
+import { toQuery } from './modules-api';
 import {
   acceptedInvitationSchema,
   createdInvitationSchema,
@@ -130,8 +131,8 @@ export const cabalesApi = {
       idempotencyKey,
       schema: expenseDetailSchema,
     }),
-  expenses: (groupId: string) =>
-    request<ExpenseSummary[]>(`/groups/${encodeURIComponent(groupId)}/expenses`, {
+  expenses: (groupId: string, filters: { from?: string; to?: string; categoryId?: string; tagId?: string; text?: string } = {}) =>
+    request<ExpenseSummary[]>(`/groups/${encodeURIComponent(groupId)}/expenses${toQuery(filters)}`, {
       schema: expenseListSchema,
     }),
   expense: (groupId: string, expenseId: string) =>

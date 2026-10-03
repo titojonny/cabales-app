@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
+import { moduleKeys, moduleQueries } from '../api/module-queries';
+import { modulesApi } from '../api/modules-api';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { ErrorMessage, Icon, StatusPanel, formatDate } from '../components/ui';
@@ -28,9 +30,25 @@ export function EventDetailPage() {
     ...queries.group(groupId, session?.user.id ?? ''),
     enabled: Boolean(session?.user.id),
   });
-  const expenses = useQuery(queries.expenses(groupId));
+  const [expenseText, setExpenseText] = useState('');
+  const [expenseTagId, setExpenseTagId] = useState('');
+  const [expenseCategoryId, setExpenseCategoryId] = useState('');
+  const expenses = useQuery(
+    queries.expenses(groupId, {
+      ...(expenseText ? { text: expenseText } : {}),
+      ...(expenseTagId ? { tagId: expenseTagId } : {}),
+      ...(expenseCategoryId ? { categoryId: expenseCategoryId } : {}),
+    }),
+  );
+  const tags = useQuery(moduleQueries.groupTags(groupId));
+  const categories = useQuery(moduleQueries.categories(groupId));
   const queryClient = useQueryClient();
   const [reminders, setReminders] = useState<number[]>([]);
+  const [newGroupTag, setNewGroupTag] = useState('');
+  const createGroupTag = useMutation({
+    mutationFn: () => modulesApi.createGroupTag(groupId, newGroupTag.trim()),
+    onSuccess: () => { setNewGroupTag(''); void queryClient.invalidateQueries({ queryKey: moduleKeys.groupTags(groupId) }); },
+  });
 
   useEffect(() => {
     if (event.data)
@@ -271,7 +289,7 @@ export function EventDetailPage() {
         />
       )}
 
-      <h2 className="section-title">Gastos</h2>
+      <div className="section-heading"><h2 className="section-title">Gastos</h2><div className="filters-row"><label htmlFor="group-expense-search">Texto</label><input id="group-expense-search" value={expenseText} onChange={(event) => setExpenseText(event.target.value)} placeholder="Buscar" /><label htmlFor="group-expense-category">Categoria</label><select id="group-expense-category" value={expenseCategoryId} onChange={(event) => setExpenseCategoryId(event.target.value)}><option value="">Todas</option>{categories.data?.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select><label htmlFor="group-expense-tag">Etiqueta</label><select id="group-expense-tag" value={expenseTagId} onChange={(event) => setExpenseTagId(event.target.value)}><option value="">Todas</option>{tags.data?.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select>{canManage && <><label htmlFor="new-group-tag">Nueva etiqueta</label><input id="new-group-tag" value={newGroupTag} onChange={(event) => setNewGroupTag(event.target.value)} maxLength={50} /><Button type="button" variant="tertiary" onPress={() => createGroupTag.mutate()} isDisabled={createGroupTag.isPending || !newGroupTag.trim()}>Crear etiqueta</Button></>}</div></div>
       {expenses.isPending && <p className="muted">Cargando gastos…</p>}
       {expenses.isError && <ErrorMessage error={expenses.error} />}
       {!expenses.isPending && !expenses.isError && eventExpenses.length === 0 && (

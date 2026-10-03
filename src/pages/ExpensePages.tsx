@@ -86,6 +86,7 @@ export function CreateExpensePage() {
   });
   const event = useQuery(queries.event(groupId, eventId));
   const categories = useQuery(moduleQueries.categories(groupId));
+  const tags = useQuery(moduleQueries.groupTags(groupId));
   const ocrJob = useQuery({
     queryKey: moduleKeys.ocrJob(ocrJobId),
     queryFn: () => modulesApi.ocrJob(ocrJobId),
@@ -93,6 +94,7 @@ export function CreateExpensePage() {
   });
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
   const [items, setItems] = useState<DraftItem[]>([]);
   const [submitError, setSubmitError] = useState<string>();
@@ -388,6 +390,7 @@ export function CreateExpensePage() {
       title: values.title,
       ...(values.notes ? { notes: values.notes } : {}),
       ...(values.categoryId ? { categoryId: values.categoryId } : {}),
+      tagIds: selectedTags,
       totalCents,
       ...(subtotalInput || taxValue || tipValue ? { subtotalCents } : {}),
       ...(taxValue
@@ -570,6 +573,29 @@ export function CreateExpensePage() {
                   ))}
                 </select>
               </>
+            )}
+            {tags.data && tags.data.length > 0 && (
+              <fieldset>
+                <legend>Etiquetas <span className="optional">Máximo 10</span></legend>
+                <div className="participant-list">
+                  {tags.data.map((tag) => (
+                    <label key={tag.id}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.includes(tag.id)}
+                        onChange={(event) =>
+                          setSelectedTags((current) =>
+                            event.target.checked
+                              ? current.length >= 10 ? current : [...current, tag.id]
+                              : current.filter((id) => id !== tag.id),
+                          )
+                        }
+                      />
+                      {tag.name}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             )}
             <label htmlFor="payer">Pagó el total</label>
             <select id="payer" aria-describedby="payer-error" {...form.register('payerId')}>

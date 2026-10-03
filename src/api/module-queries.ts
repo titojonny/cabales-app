@@ -27,6 +27,11 @@ export const moduleKeys = {
   pushConfig: ['notifications', 'push-config'] as const,
   achievements: ['achievements'] as const,
   privacyRequests: ['privacy'] as const,
+  personalExpenses: (filters: Record<string, string | number | undefined>) => ['expenses', filters] as const,
+  personalTags: ['tags', 'personal'] as const,
+  personalCategories: ['categories', 'personal'] as const,
+  personalRecurring: ['recurring-expenses', 'personal'] as const,
+  groupTags: (groupId: string) => ['groups', groupId, 'tags'] as const,
 };
 
 export const moduleQueries = {
@@ -73,4 +78,10 @@ export const moduleQueries = {
     queryOptions({ queryKey: moduleKeys.achievements, queryFn: modulesApi.achievements }),
   privacyRequests: () =>
     queryOptions({ queryKey: moduleKeys.privacyRequests, queryFn: modulesApi.privacyRequests }),
+  personalExpenses: (filters: Record<string, string | number | undefined> = {}) =>
+    queryOptions({ queryKey: moduleKeys.personalExpenses(filters), queryFn: () => modulesApi.personalExpenses(filters) }),
+  personalTags: () => queryOptions({ queryKey: moduleKeys.personalTags, queryFn: modulesApi.personalTags }),
+  personalCategories: () => queryOptions({ queryKey: moduleKeys.personalCategories, queryFn: modulesApi.personalCategories }),
+  personalRecurring: () => queryOptions({ queryKey: moduleKeys.personalRecurring, queryFn: modulesApi.personalRecurring }),
+  groupTags: (groupId: string) => queryOptions({ queryKey: moduleKeys.groupTags(groupId), queryFn: () => modulesApi.groupTags(groupId) }),
 };
