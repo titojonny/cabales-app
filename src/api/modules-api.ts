@@ -21,6 +21,7 @@ import {
   documentGrantSchema,
   documentListSchema,
   documentSchema,
+  documentLockStatusSchema,
   downloadUrlSchema,
   fundDetailSchema,
   fundListSchema,
@@ -36,9 +37,14 @@ import {
   pushConfigSchema,
   privacyRequestListSchema,
   privacyRequestSchema,
+  sharedLinkListSchema,
+  sharedLinkSchema,
+  sharedDocumentSchema,
+  webAuthnOptionsSchema,
   statisticsSchema,
   unreadCountSchema,
   type DocumentAccess,
+  type DocumentLockStatus,
   type FundMovementType,
   type NotificationPreferences,
   type PrivacyRequestType,
@@ -55,7 +61,7 @@ const acceptedSchema = z.object({ accepted: z.literal(true) });
 const userEnvelopeSchema = sessionSchema.transform((session) => session.user);
 
 /** Construye una query string omitiendo valores vacíos. */
-export function toQuery(params: Record<string, string | number | undefined | null>): string {
+export function toQuery(params: Record<string, string | number | boolean | undefined | null>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') search.set(key, String(value));
@@ -231,20 +237,41 @@ export const modulesApi = {
     }),
 
   // Documentos.
-  documents: (filters: { groupId?: string; expenseId?: string; cursor?: string } = {}) =>
+  documents: (filters: {
+    groupId?: string;
+    expenseId?: string;
+    category?: string;
+    pinned?: boolean;
+    recent?: boolean;
+    cursor?: string;
+  } = {}) =>
     requestWithMeta(`/documents${toQuery(filters)}`, { schema: documentListSchema }),
-  uploadDocument: (file: File, links: { groupId?: string; eventId?: string; expenseId?: string }) =>
-    request(`/documents${toQuery({ name: file.name, ...links })}`, {
+  uploadDocument: (
+    file: File,
+    links: {
+      groupId?: string;
+      eventId?: string;
+      expenseId?: string;
+      category?: string;
+      expiresAt?: string;
+      expiryNoticeDays?: number[];
+    },
+  ) => {
+    const { expiryNoticeDays, ...rest } = links;
+    return request(`/documents${toQuery({ name: file.name, ...rest, ...(expiryNoticeDays ? { expiryNoticeDays: expiryNoticeDays.join(',') } : {}) })}`, {
       method: 'POST',
       rawBody: file,
       schema: documentSchema,
-    }),
+    });
+  },
   renameDocument: (documentId: string, name: string) =>
     request(`/documents/${enc(documentId)}`, {
       method: 'PATCH',
       body: { name },
       schema: documentSchema,
     }),
+  updateDocument: (documentId: string, input: Record<string, unknown>) =>
+    request(`/documents/${enc(documentId)}`, { method: 'PATCH', body: input, schema: documentSchema }),
   deleteDocument: (documentId: string) =>
     request(`/documents/${enc(documentId)}`, { method: 'DELETE' }),
   documentDownloadUrl: (documentId: string) =>
@@ -252,16 +279,41 @@ export const modulesApi = {
       method: 'POST',
       schema: downloadUrlSchema,
     }),
+  downloadDocument: (documentId: string) =>
+    requestFile(`/documents/${enc(documentId)}/download`),
   documentGrants: (documentId: string) =>
     request(`/documents/${enc(documentId)}/grants`, { schema: documentGrantListSchema }),
-  putDocumentGrant: (documentId: string, userId: string, level: DocumentAccess) =>
+  putDocumentGrant: (documentId: string, userId: string, level: DocumentAccess, expiresAt?: string | null) =>
     request(`/documents/${enc(documentId)}/grants/${enc(userId)}`, {
       method: 'PUT',
-      body: { access: level },
+      body: { access: level, ...(expiresAt !== undefined ? { expiresAt } : {}) },
       schema: documentGrantSchema,
     }),
   deleteDocumentGrant: (documentId: string, userId: string) =>
     request(`/documents/${enc(documentId)}/grants/${enc(userId)}`, { method: 'DELETE' }),
+  pinDocument: (documentId: string) => request(`/documents/${enc(documentId)}/pin`, { method: 'POST' }),
+  unpinDocument: (documentId: string) => request(`/documents/${enc(documentId)}/pin`, { method: 'DELETE' }),
+  documentSharedLinks: (documentId: string) =>
+    request(`/documents/${enc(documentId)}/shared-links`, { schema: sharedLinkListSchema }),
+  createDocumentSharedLink: (documentId: string, input: { expiresAt: string; maxAccesses?: number }) =>
+    request(`/documents/${enc(documentId)}/shared-links`, { method: 'POST', body: input, schema: sharedLinkSchema }),
+  revokeDocumentSharedLink: (documentId: string, linkId: string) =>
+    request(`/documents/${enc(documentId)}/shared-links/${enc(linkId)}/revoke`, { method: 'POST' }),
+  documentLockStatus: () => request<DocumentLockStatus>('/documents/lock/status', { schema: documentLockStatusSchema }),
+  configureDocumentLock: (input: { password: string; pin?: string | null; unlockTtlMinutes?: number }) =>
+    request('/documents/lock', { method: 'PUT', body: input }),
+  removeDocumentLock: (password: string) => request('/documents/lock', { method: 'DELETE', body: { password } }),
+  unlockDocumentsWithPin: (pin: string) => request('/documents/lock/pin', { method: 'POST', body: { pin }, schema: documentLockStatusSchema }),
+  webAuthnRegistrationOptions: (password: string) =>
+    request('/documents/lock/webauthn/registration-options', { method: 'POST', body: { password }, schema: webAuthnOptionsSchema }),
+  webAuthnRegistrationVerify: (response: Record<string, unknown>) =>
+    request('/documents/lock/webauthn/registration-verify', { method: 'POST', body: response }),
+  webAuthnAuthenticationOptions: () =>
+    request('/documents/lock/webauthn/authentication-options', { method: 'POST', schema: webAuthnOptionsSchema }),
+  webAuthnAuthenticationVerify: (response: Record<string, unknown>) =>
+    request('/documents/lock/webauthn/authentication-verify', { method: 'POST', body: response, schema: documentLockStatusSchema }),
+  sharedDocument: (token: string) => request(`/share/documents/${enc(token)}`, { schema: sharedDocumentSchema }),
+  downloadSharedDocument: (token: string) => requestFile(`/share/documents/${enc(token)}/download`),
 
   // OCR.
   ocrJobs: (documentId?: string) =>

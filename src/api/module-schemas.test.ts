@@ -102,4 +102,36 @@ describe('contrato de módulos con respuestas reales', () => {
     expect(modules.incomeSchema.safeParse(valid).success).toBe(true);
     expect(modules.incomeSchema.safeParse({ ...valid, amountCents: 10.5 }).success).toBe(false);
   });
+  it('acepta contratos P5 de categorías, enlaces y bloqueo', () => {
+    const document = modules.documentSchema.parse({
+      ...responses.document,
+      category: 'IDENTIDAD',
+      expiresAt: '2026-10-20T00:00:00.000Z',
+      expiryNoticeDays: [30, 7],
+      isLegacy: false,
+      isPinned: true,
+    });
+    expect(document.category).toBe('IDENTIDAD');
+    expect(
+      modules.sharedLinkSchema.parse({
+        id: '10000000-0000-4000-8000-000000000001',
+        expiresAt: '2026-10-05T00:00:00.000Z',
+        maxAccesses: 3,
+        accessCount: 0,
+        lastAccessAt: null,
+        revokedAt: null,
+        createdAt: '2026-10-03T00:00:00.000Z',
+      }).maxAccesses,
+    ).toBe(3);
+    expect(
+      modules.documentLockStatusSchema.parse({
+        enabled: true,
+        pinEnabled: true,
+        webauthnEnabled: false,
+        webauthnAvailable: true,
+        unlockedUntil: null,
+        unlockTtlMinutes: 10,
+      }).enabled,
+    ).toBe(true);
+  });
 });

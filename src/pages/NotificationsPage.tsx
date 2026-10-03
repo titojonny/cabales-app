@@ -29,6 +29,8 @@ const typeLabel: Record<NotificationType, string> = {
   'fund.movement': 'Movimientos de fondos',
   'ocr.finished': 'Lectura de comprobantes',
   'privacy.updated': 'Solicitudes de privacidad',
+  'document.expiring': 'Documentos por vencer',
+  'document.expired': 'Documentos vencidos',
   'achievement.unlocked': 'Logros',
   'event.reminder': 'Recordatorios de eventos',
 };

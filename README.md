@@ -5,6 +5,13 @@
 La PWA consulta `GET /api/v1/auth/config` y solo muestra **Continuar con Google** cuando la API responde `googleEnabled: true`; no conoce ni almacena credenciales OAuth. El inicio usa la redireccion del servidor y vuelve a la misma sesion por cookie HttpOnly y CSRF. Desde **Cuenta** se puede iniciar la vinculacion y solicitar la desvinculacion; la API mantiene al menos un metodo de acceso.
 
 Para habilitarlo configura en `cabales-api` un cliente OAuth web de Google Cloud y registra exactamente `http://localhost:3000/api/v1/auth/google/callback` (o el URI HTTPS de produccion) como URI de redireccion autorizado. Consulta el README de la API para el procedimiento completo.
+## P5: Docs
+
+La biblioteca de documentos permite filtrar por categoría (`IDENTIDAD`, `VIAJE`, `SEGURO`, `VEHICULO`, `SALUD`, `HOGAR`, `FINANZAS`, `OTRO`), fijar documentos, consultar recientes y configurar vencimiento. La descarga usa la API autenticada para que el servidor autorice y descifre el contenido; no se guarda una URL directa de S3.
+
+Los enlaces compartidos se gestionan desde cada documento: caducidad de hasta 30 días, límite opcional, copiar y revocar. La ruta pública solo muestra el nombre y el botón de descarga.
+
+Docs puede protegerse desde Cuenta con PIN de 6–12 dígitos o passkey/biometría cuando el navegador lo soporta. El desbloqueo es reciente y ligado a la sesión.
 
 ## P3: agenda de eventos
 
@@ -20,7 +27,7 @@ El divisor admite `EQUAL`, `EXACT` y `PERCENT`, con suma visible de porcentajes 
 
 ## Estado del MVP
 
-Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Cabudas, Docs, Estadísticas y Logros están integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
+Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Docs está conectado a la API con filtros, vencimiento, enlaces temporales y bloqueo; Cabudas, Estadísticas y Logros siguen integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
 
 No existe modo demo activo. Sin una API compatible, la aplicación compila y sirve la landing y los formularios públicos, mientras el área privada presenta un error controlado al no poder verificar la sesión.
 
@@ -176,7 +183,7 @@ Limitaciones conocidas del MVP:
 - No existe envío de correo: OWNER/ADMIN debe compartir manualmente el enlace de invitación mostrado una sola vez. El token se transporta en el fragmento de URL para no enviarlo en Referer, pero sigue siendo un bearer token y debe compartirse únicamente con la persona destinataria.
 - Eliminar integrantes no está implementado; el divisor usa el padrón devuelto por el detalle de evento.
 - Crear liquidaciones puede devolver 403 para miembros sin rol OWNER/ADMIN; la API conserva la decisión de autorización.
-- Docs sigue fuera de la caché offline; Estadísticas, Cabudas y Logros consultan datos reales y limitados por usuario.
+- Docs ya dispone de biblioteca, cifrado servido por API, enlaces temporales y bloqueo, pero sigue fuera de la caché offline. Estadísticas, Cabudas y Logros consultan datos reales y limitados por usuario.
 - La persistencia offline solo conserva la allowlist documentada en la decisión P7; no incluye datos demo ni escrituras offline.
 - Los nombres registrados en detalles financieros se enriquecen consultando el evento; si esa consulta falla, se presenta `Participante` con ID corto sin inventar identidad.
 

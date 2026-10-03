@@ -1,4 +1,5 @@
 import { Button } from '@heroui/react';
+import { startRegistration } from '@simplewebauthn/browser';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -169,6 +170,132 @@ function GoogleAccountSection() {
       {(link.isError || unlink.isError || config.isError) && (
         <ErrorMessage error={link.error ?? unlink.error ?? config.error} />
       )}
+    </section>
+  );
+}
+
+function DocumentLockSection() {
+  const queryClient = useQueryClient();
+  const status = useQuery({
+    queryKey: ['documents', 'lock'],
+    queryFn: modulesApi.documentLockStatus,
+    retry: false,
+  });
+  const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
+  const [ttl, setTtl] = useState('10');
+  const browserSupportsWebAuthn = typeof window !== 'undefined' && 'PublicKeyCredential' in window;
+  const save = useMutation({
+    mutationFn: () =>
+      modulesApi.configureDocumentLock({
+        password,
+        ...(pin ? { pin } : {}),
+        unlockTtlMinutes: Number(ttl),
+      }),
+    onSuccess: () => {
+      setPassword('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => modulesApi.removeDocumentLock(password),
+    onSuccess: () => {
+      setPassword('');
+      setPin('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const register = useMutation({
+    mutationFn: async () => {
+      const options = await modulesApi.webAuthnRegistrationOptions(password);
+      const response = await startRegistration({ optionsJSON: options as never });
+      return modulesApi.webAuthnRegistrationVerify(response as unknown as Record<string, unknown>);
+    },
+    onSuccess: () => {
+      setPassword('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const error = save.error ?? remove.error ?? register.error;
+  return (
+    <section
+      className="form-card glass-panel"
+      id="bloqueo-docs"
+      aria-labelledby="document-lock-title"
+    >
+      <h2 id="document-lock-title">Bloqueo de Docs</h2>
+      <p className="muted small">
+        {status.data?.enabled ? 'Activo' : 'Inactivo'} · desbloqueo reciente:{' '}
+        {status.data?.unlockTtlMinutes ?? 10} minutos.
+      </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+        noValidate
+      >
+        <label htmlFor="docs-lock-password">Contraseña actual</label>
+        <input
+          id="docs-lock-password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+        <label htmlFor="docs-lock-pin">
+          PIN nuevo (6 a 12 dígitos; vacío conserva el PIN actual)
+        </label>
+        <input
+          id="docs-lock-pin"
+          inputMode="numeric"
+          minLength={6}
+          maxLength={12}
+          value={pin}
+          onChange={(event) => setPin(event.target.value)}
+        />
+        <label htmlFor="docs-lock-ttl">Minutos de desbloqueo</label>
+        <input
+          id="docs-lock-ttl"
+          type="number"
+          min={1}
+          max={60}
+          value={ttl}
+          onChange={(event) => setTtl(event.target.value)}
+        />
+        <div className="button-row">
+          <Button variant="primary" type="submit" isDisabled={save.isPending || !password}>
+            {status.data?.enabled ? 'Guardar cambios' : 'Activar bloqueo'}
+          </Button>
+          {status.data?.enabled && (
+            <Button
+              variant="danger-soft"
+              type="button"
+              isDisabled={remove.isPending || !password}
+              onPress={() => remove.mutate()}
+            >
+              Quitar bloqueo
+            </Button>
+          )}
+        </div>
+      </form>
+      {status.data?.webauthnAvailable && browserSupportsWebAuthn && (
+        <Button
+          variant="tertiary"
+          type="button"
+          isDisabled={register.isPending || !password}
+          onPress={() => register.mutate()}
+        >
+          {register.isPending ? 'Esperando passkey…' : 'Añadir passkey o biometría'}
+        </Button>
+      )}
+      {status.data?.webauthnAvailable && !browserSupportsWebAuthn && (
+        <p className="muted small">
+          Este navegador no admite passkeys; puedes proteger Docs con un PIN.
+        </p>
+      )}
+      {error && <ErrorMessage error={error} />}
     </section>
   );
 }
@@ -396,6 +523,7 @@ export function AccountPage() {
       <div className="account-grid">
         <ProfileSection />
         <GoogleAccountSection />
+        <DocumentLockSection />
         <PrivacySection />
       </div>
       <div className="button-row">

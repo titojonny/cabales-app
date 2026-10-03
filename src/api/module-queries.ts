@@ -11,9 +11,10 @@ export const moduleKeys = {
   fund: (groupId: string, fundId: string) => ['groups', groupId, 'funds', fundId] as const,
   fundMovements: (groupId: string, fundId: string) =>
     ['groups', groupId, 'funds', fundId, 'movements'] as const,
-  documents: (filters: Record<string, string | undefined>) => ['documents', filters] as const,
+  documents: (filters: Record<string, string | number | boolean | undefined>) => ['documents', filters] as const,
   documentsRoot: ['documents'] as const,
   documentGrants: (documentId: string) => ['documents', 'grants', documentId] as const,
+  documentSharedLinks: (documentId: string) => ['documents', 'shared-links', documentId] as const,
   ocrJobs: (documentId?: string) => ['ocr', documentId ?? 'all'] as const,
   ocrJob: (jobId: string) => ['ocr', 'job', jobId] as const,
   ocrRoot: ['ocr'] as const,
