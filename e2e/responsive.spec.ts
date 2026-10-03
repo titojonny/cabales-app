@@ -119,6 +119,18 @@ test('la navegación principal funciona en cada viewport', async ({ page }) => {
   await expectNoHorizontalScroll(page);
 });
 
+test('muestra el estado offline y no intenta encolar un ingreso', async ({ page, context }) => {
+  await mockPrivateApi(page);
+  await page.goto('/app/statistics');
+  await expect(page.getByRole('heading', { name: 'Cómo se mueve tu dinero' })).toBeVisible();
+  await context.setOffline(true);
+  await expect(page.getByText('Sin conexión.', { exact: true })).toBeVisible();
+  await page.getByLabel('Importe del ingreso').fill('10.00');
+  await page.getByLabel('Categoría del ingreso').fill('Prueba');
+  await expect(page.getByRole('button', { name: 'Sin conexión' })).toBeDisabled();
+  await context.setOffline(false);
+});
+
 test('abre un gasto con los datos del OCR prellenados y editables', async ({ page }) => {
   const groupId = responses.group.id;
   const eventId = responses.event.id;

@@ -106,7 +106,7 @@ export async function requestFile(
   const method = (options.method || 'GET').toUpperCase();
   const requestId = crypto.randomUUID();
   const headers = new Headers(options.headers);
-  headers.set('Accept', 'text/csv, application/octet-stream');
+  headers.set('Accept', 'text/csv, application/pdf, application/octet-stream');
   headers.set('X-Request-ID', requestId);
   if (mutationMethods.has(method) && !csrfToken) csrfToken = readCsrfCookie();
   if (mutationMethods.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
@@ -151,6 +151,13 @@ export async function requestWithMeta<T>(
 ): Promise<{ data: T; meta: ResponseMeta }> {
   const operation = operationName(path);
   const method = (options.method || 'GET').toUpperCase();
+  if (mutationMethods.has(method) && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new HttpError(
+      'Sin conexión. Esta acción está deshabilitada y no se encolan pagos ni cambios.',
+      0,
+      'OFFLINE_MUTATION',
+    );
+  }
   const requestId = crypto.randomUUID();
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');

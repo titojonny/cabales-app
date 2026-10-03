@@ -3,6 +3,8 @@ import responses from '../test/fixtures/api-responses.json';
 import * as modules from './module-schemas';
 import * as core from './schemas';
 
+const timestamp = '2026-10-03T12:00:00.000Z';
+
 /**
  * Respuestas reales capturadas de la API 1.2.0 (flujo de integración) y saneadas.
  * Protege el contrato: si la API cambia una forma, estos adaptadores lo detectan antes que la UI.
@@ -84,5 +86,20 @@ describe('contrato de módulos con respuestas reales', () => {
         items: [{ name: 'Pupusa', amountCents: 250 }],
       }).items,
     ).toEqual([{ name: 'Pupusa', amountCents: 250 }]);
+  });
+
+  it('valida el registro de ingreso personal sin aceptar un importe decimal', () => {
+    const valid = {
+      id: '10000000-0000-4000-8000-000000000001',
+      amountCents: 125000,
+      date: timestamp,
+      category: 'Salario',
+      note: null,
+      currency: 'USD',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    expect(modules.incomeSchema.safeParse(valid).success).toBe(true);
+    expect(modules.incomeSchema.safeParse({ ...valid, amountCents: 10.5 }).success).toBe(false);
   });
 });

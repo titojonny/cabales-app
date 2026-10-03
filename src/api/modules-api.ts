@@ -20,6 +20,8 @@ import {
   fundListSchema,
   fundMovementListSchema,
   fundSchema,
+  incomeListSchema,
+  incomeSchema,
   notificationListSchema,
   notificationPreferencesSchema,
   notificationSchema,
@@ -237,6 +239,32 @@ export const modulesApi = {
     groupId?: string;
     currency?: string;
   }) => requestFile(`/statistics/summary/export${toQuery(filters)}`),
+  statisticsPdfExport: (filters: {
+    from?: string;
+    to?: string;
+    groupId?: string;
+    currency?: string;
+  }) => requestFile(`/statistics/summary/export/pdf${toQuery(filters)}`),
+  incomes: (filters: { from?: string; to?: string; currency?: string } = {}) =>
+    request(`/incomes${toQuery(filters)}`, { schema: incomeListSchema }),
+  createIncome: (input: {
+    amountCents: number;
+    date: string;
+    category: string;
+    note?: string | null;
+    currency: string;
+  }) => request('/incomes', { method: 'POST', body: input, schema: incomeSchema }),
+  updateIncome: (
+    incomeId: string,
+    input: Partial<{
+      amountCents: number;
+      date: string;
+      category: string;
+      note: string | null;
+      currency: string;
+    }>,
+  ) => request(`/incomes/${enc(incomeId)}`, { method: 'PATCH', body: input, schema: incomeSchema }),
+  deleteIncome: (incomeId: string) => request(`/incomes/${enc(incomeId)}`, { method: 'DELETE' }),
 
   // Avisos.
   notifications: (status: 'ACTIVE' | 'UNREAD' | 'ARCHIVED' = 'ACTIVE', cursor?: string) =>
