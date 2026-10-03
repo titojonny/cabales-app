@@ -784,7 +784,7 @@ legend {
 }
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 0.25rem;
   border: 1px solid var(--line);
   border-radius: 15px;
@@ -882,6 +882,35 @@ legend {
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
+}
+.person-breakdown {
+  align-items: start;
+}
+.person-breakdown > div,
+.person-breakdown-values {
+  display: grid;
+  gap: 0.15rem;
+  text-align: right;
+}
+.person-breakdown small,
+.expense-breakdown {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+.expense-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.8rem;
+}
+.percentage-total {
+  margin-top: 0.65rem;
+}
+.tip-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
 }
 .ocr-review-notice,
 .ocr-create-expense,

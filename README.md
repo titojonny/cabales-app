@@ -2,6 +2,10 @@
 
 PWA Mobile First para organizar grupos, registrar eventos, dividir gastos y cerrar liquidaciones. Este repositorio contiene el cliente web React (Tailwind CSS y TypeScript) y consume el contrato HTTP de Cabales API `/api/v1` (Express + PostgreSQL) sin importar código del servidor.
 
+## P2: reparto porcentual y desglose
+
+El divisor admite `EQUAL`, `EXACT` y `PERCENT`, con suma visible de porcentajes hasta `100.00 %`. El formulario permite impuesto y propina por importe o porcentaje, atajos de 10/15/20 % y desglose de subtotal, impuesto, propina y total por persona. Los importes porcentuales se convierten a puntos básicos y siguen el redondeo documentado por la API.
+
 ## Estado del MVP
 
 Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Cabudas, Docs, Estadísticas y Logros están integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.

@@ -16,7 +16,16 @@ import {
   calculateItemAllocations,
   type ItemSplitMode,
 } from '../domain/item-splitting';
-import { formatMoney, isExactSplitValid, parseMoneyToCents, splitEqual } from '../domain/money';
+import {
+  formatMoney,
+  isExactSplitValid,
+  parseMoneyToCents,
+  parsePercentageToBps,
+  roundPercentageCents,
+  splitEqual,
+  splitPercentage,
+  splitProportional,
+} from '../domain/money';
 import {
   fallbackParticipantLabel,
   participantLabel,
@@ -94,6 +103,11 @@ export function CreateExpensePage() {
       title: '',
       notes: '',
       amount: '',
+      subtotal: '',
+      taxMode: 'AMOUNT',
+      taxValue: '',
+      tipMode: 'PERCENT',
+      tipValue: '',
       currency: 'USD',
       payerId: '',
       splitMode: 'EQUAL',
@@ -103,6 +117,11 @@ export function CreateExpensePage() {
   });
   const splitMode = form.watch('splitMode');
   const amount = form.watch('amount');
+  const subtotalInput = form.watch('subtotal') ?? '';
+  const taxMode = form.watch('taxMode');
+  const taxValue = form.watch('taxValue');
+  const tipMode = form.watch('tipMode');
+  const tipValue = form.watch('tipValue');
   const currency = form.watch('currency');
   const proposal = ocrJob.data?.proposal;
   const isOcr = Boolean(ocrJobId);
@@ -125,6 +144,15 @@ export function CreateExpensePage() {
     prefilled.current = true;
     form.setValue('title', proposal.merchant ?? '');
     form.setValue('amount', moneyText(proposal.totalCents));
+    form.setValue('subtotal', moneyText(proposal.subtotalCents ?? proposal.totalCents));
+    if (proposal.taxCents != null) {
+      form.setValue('taxMode', 'AMOUNT');
+      form.setValue('taxValue', moneyText(proposal.taxCents));
+    }
+    if (proposal.tipCents != null) {
+      form.setValue('tipMode', 'AMOUNT');
+      form.setValue('tipValue', moneyText(proposal.tipCents));
+    }
     if (proposal.occurredAt) form.setValue('occurredAt', localDateTime(proposal.occurredAt));
     setItems(
       proposal.items.map((item) => ({
@@ -140,7 +168,29 @@ export function CreateExpensePage() {
   }, [form, proposal]);
 
   const participants = event.data?.participants ?? [];
-  const totalCents = parseMoneyToCents(amount) ?? 0;
+  const explicitSubtotalCents = parseMoneyToCents(subtotalInput);
+  const subtotalCents = explicitSubtotalCents ?? parseMoneyToCents(amount) ?? 0;
+  const taxCents =
+    taxValue && taxMode === 'PERCENT'
+      ? (() => {
+          const bps = parsePercentageToBps(taxValue);
+          return bps == null ? 0 : roundPercentageCents(subtotalCents, bps);
+        })()
+      : (parseMoneyToCents(taxValue) ?? 0);
+  const tipCents =
+    tipValue && tipMode === 'PERCENT'
+      ? (() => {
+          const bps = parsePercentageToBps(tipValue);
+          return bps == null ? 0 : roundPercentageCents(subtotalCents, bps);
+        })()
+      : (parseMoneyToCents(tipValue) ?? 0);
+  const totalCents = subtotalCents + taxCents + tipCents;
+  const [percentageValues, setPercentageValues] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (subtotalInput && totalCents > 0) {
+      form.setValue('amount', moneyText(totalCents), { shouldValidate: true });
+    }
+  }, [form, subtotalInput, taxValue, tipValue, totalCents]);
   const itemCalculations = useMemo(
     () =>
       items.map((item) => {
@@ -170,28 +220,62 @@ export function CreateExpensePage() {
   );
   const itemParticipantIds = [...new Set(items.flatMap((item) => item.assignedIds))];
   const expenseParticipantIds = items.length > 0 ? itemParticipantIds : selected;
+  const percentageBps = selected.map(
+    (eventParticipantId) => parsePercentageToBps(percentageValues[eventParticipantId] ?? '') ?? 0,
+  );
+  const percentageTotalBps = percentageBps.reduce((sum, value) => sum + value, 0);
   const itemShares = aggregateItemAllocations(
     itemCalculations.flatMap((calculation) =>
       calculation.allocations ? [calculation.allocations] : [],
     ),
   );
-  const equalPreview = splitEqual(totalCents, selected);
-  const itemDifference = totalCents - itemTotalCents;
+  const equalPreview = splitEqual(subtotalCents, selected);
+  const itemDifference = subtotalCents - itemTotalCents;
   const personShares =
     items.length > 0
-      ? expenseParticipantIds.map((eventParticipantId) => ({
-          eventParticipantId,
-          shareCents: itemShares.get(eventParticipantId) ?? 0,
-        }))
+      ? splitMode === 'PERCENT'
+        ? expenseParticipantIds.map((eventParticipantId, index) => ({
+            eventParticipantId,
+            shareCents:
+              splitPercentage(
+                subtotalCents,
+                expenseParticipantIds.map(
+                  (id) => parsePercentageToBps(percentageValues[id] ?? '') ?? 0,
+                ),
+              )[index] ?? 0,
+          }))
+        : expenseParticipantIds.map((eventParticipantId) => ({
+            eventParticipantId,
+            shareCents: itemShares.get(eventParticipantId) ?? 0,
+          }))
       : splitMode === 'EQUAL'
-        ? splitEqual(totalCents, selected).map(({ memberId, amountMinor }) => ({
+        ? splitEqual(subtotalCents, selected).map(({ memberId, amountMinor }) => ({
             eventParticipantId: memberId,
             shareCents: amountMinor,
           }))
-        : selected.map((eventParticipantId) => ({
-            eventParticipantId,
-            shareCents: parseMoneyToCents(exactAmounts[eventParticipantId] ?? '') ?? 0,
-          }));
+        : splitMode === 'PERCENT'
+          ? splitPercentage(subtotalCents, percentageBps).map((shareCents, index) => ({
+              eventParticipantId: selected[index]!,
+              shareCents,
+            }))
+          : selected.map((eventParticipantId) => ({
+              eventParticipantId,
+              shareCents: parseMoneyToCents(exactAmounts[eventParticipantId] ?? '') ?? 0,
+            }));
+  const taxShares = splitProportional(
+    taxCents,
+    personShares.map((share) => share.shareCents),
+  );
+  const tipShares = splitProportional(
+    tipCents,
+    personShares.map((share) => share.shareCents),
+  );
+  const personBreakdown = personShares.map((share, index) => ({
+    ...share,
+    taxCents: taxShares[index] ?? 0,
+    tipCents: tipShares[index] ?? 0,
+    totalCents: share.shareCents + (taxShares[index] ?? 0) + (tipShares[index] ?? 0),
+  }));
 
   // Un OCR fallido no bloquea el formulario: el aviso muestra el error y permite continuar a mano.
   if (group.isPending || event.isPending || (isOcr && ocrJob.isPending))
@@ -220,11 +304,17 @@ export function CreateExpensePage() {
     const total = parseMoneyToCents(values.amount);
     if (event.data.status !== 'OPEN' || event.data.settlement)
       return setSubmitError('El evento está cerrado y ya no admite gastos.');
-    if (total === null) return setSubmitError('El total no es un monto válido.');
+    if (total === null || totalCents <= 0) return setSubmitError('El total no es un monto válido.');
     if (expenseParticipantIds.length === 0)
       return setSubmitError('Selecciona al menos una persona para el reparto.');
     if (!expenseParticipantIds.includes(values.payerId))
       return setSubmitError('La persona que pagó también debe participar en el gasto.');
+    if (splitMode === 'PERCENT' && percentageTotalBps !== 10_000)
+      return setSubmitError('Los porcentajes deben sumar exactamente 100 %.');
+    if (items.length > 0 && splitMode === 'PERCENT')
+      return setSubmitError(
+        'Para combinar items con porcentajes, asigna primero los items y usa Montos exactos.',
+      );
     const occurredAt = new Date(values.occurredAt);
     if (Number.isNaN(occurredAt.getTime())) return setSubmitError('La fecha no es válida.');
     let shares: Array<{ eventParticipantId: string; shareCents: number }>;
@@ -245,7 +335,7 @@ export function CreateExpensePage() {
       if (
         shares.some((share) => share.shareCents <= 0) ||
         !isExactSplitValid(
-          total,
+          subtotalCents,
           shares.map((share) => share.shareCents),
         )
       )
@@ -270,19 +360,19 @@ export function CreateExpensePage() {
         splitMode === 'EXACT' &&
         (exactShares.some((share) => share.shareCents === null) ||
           !isExactSplitValid(
-            total,
+            subtotalCents,
             exactShares.map((share) => share.shareCents ?? 0),
           ))
       )
         return setSubmitError('Los montos exactos positivos deben sumar el total del gasto.');
       if (
         splitMode === 'EQUAL' &&
-        splitEqual(total, selected).some((share) => share.amountMinor <= 0)
+        splitEqual(subtotalCents, selected).some((share) => share.amountMinor <= 0)
       )
         return setSubmitError('El total debe permitir al menos un centavo por participante.');
       shares =
         splitMode === 'EQUAL'
-          ? splitEqual(total, selected).map(({ memberId, amountMinor }) => ({
+          ? splitEqual(subtotalCents, selected).map(({ memberId, amountMinor }) => ({
               eventParticipantId: memberId,
               shareCents: amountMinor,
             }))
@@ -291,18 +381,36 @@ export function CreateExpensePage() {
               shareCents: share.shareCents!,
             }));
     }
+    const payloadSplitMode = items.length > 0 ? 'EXACT' : splitMode;
     const input: CreateExpenseInput = {
       eventId,
       ...(ocrJobId ? { ocrJobId } : {}),
       title: values.title,
       ...(values.notes ? { notes: values.notes } : {}),
       ...(values.categoryId ? { categoryId: values.categoryId } : {}),
-      totalCents: total,
+      totalCents,
+      ...(subtotalInput || taxValue || tipValue ? { subtotalCents } : {}),
+      ...(taxValue
+        ? taxMode === 'PERCENT'
+          ? { taxPercentBps: parsePercentageToBps(taxValue)! }
+          : { taxCents: parseMoneyToCents(taxValue)! }
+        : {}),
+      ...(tipValue
+        ? tipMode === 'PERCENT'
+          ? { tipPercentBps: parsePercentageToBps(tipValue)! }
+          : { tipCents: parseMoneyToCents(tipValue)! }
+        : {}),
       currency: values.currency,
-      splitMode: 'EXACT',
+      splitMode: payloadSplitMode,
       occurredAt: occurredAt.toISOString(),
-      participants: shares,
-      payers: [{ eventParticipantId: values.payerId, amountCents: total }],
+      participants:
+        payloadSplitMode === 'PERCENT'
+          ? expenseParticipantIds.map((eventParticipantId) => ({
+              eventParticipantId,
+              percentageBps: parsePercentageToBps(percentageValues[eventParticipantId] ?? '') ?? 0,
+            }))
+          : shares,
+      payers: [{ eventParticipantId: values.payerId, amountCents: totalCents }],
       ...(payloadItems ? { items: payloadItems } : {}),
     };
     mutation.mutate({ input, idempotencyKey: crypto.randomUUID() });
@@ -351,6 +459,7 @@ export function CreateExpensePage() {
                   id="amount"
                   inputMode="decimal"
                   placeholder="0.00"
+                  readOnly={Boolean(subtotalInput)}
                   aria-describedby="amount-error"
                   {...form.register('amount')}
                 />
@@ -361,6 +470,78 @@ export function CreateExpensePage() {
                 <select id="expense-currency" {...form.register('currency')}>
                   <option value={group.data.currency}>{group.data.currency}</option>
                 </select>
+              </div>
+            </div>
+            <p className="field-help">El total incluye subtotal, impuesto y propina.</p>
+            <div className="field-pair even">
+              <div>
+                <label htmlFor="expense-subtotal">
+                  Subtotal <span className="optional">Opcional si no hay cargos</span>
+                </label>
+                <input
+                  id="expense-subtotal"
+                  inputMode="decimal"
+                  placeholder="Igual al total"
+                  aria-describedby="expense-subtotal-error"
+                  {...form.register('subtotal')}
+                />
+                <FieldError
+                  id="expense-subtotal-error"
+                  message={form.formState.errors.subtotal?.message}
+                />
+              </div>
+              <div>
+                <label htmlFor="expense-tax">Impuesto</label>
+                <div className="field-pair even">
+                  <select id="expense-tax-mode" {...form.register('taxMode')}>
+                    <option value="AMOUNT">Importe</option>
+                    <option value="PERCENT">Porcentaje</option>
+                  </select>
+                  <input
+                    id="expense-tax"
+                    inputMode="decimal"
+                    placeholder={taxMode === 'PERCENT' ? '0.00 %' : '0.00'}
+                    aria-label="Valor del impuesto"
+                    {...form.register('taxValue')}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="field-pair even">
+              <div>
+                <label htmlFor="expense-tip">Propina</label>
+                <div className="field-pair even">
+                  <select id="expense-tip-mode" {...form.register('tipMode')}>
+                    <option value="AMOUNT">Importe</option>
+                    <option value="PERCENT">Porcentaje</option>
+                  </select>
+                  <input
+                    id="expense-tip"
+                    inputMode="decimal"
+                    placeholder={tipMode === 'PERCENT' ? '0.00 %' : '0.00'}
+                    aria-label="Valor de la propina"
+                    {...form.register('tipValue')}
+                  />
+                </div>
+                <div className="tip-shortcuts" aria-label="Atajos de propina">
+                  {[10, 15, 20].map((percent) => (
+                    <button
+                      className="text-button"
+                      type="button"
+                      key={percent}
+                      onClick={() => {
+                        form.setValue('tipMode', 'PERCENT');
+                        form.setValue('tipValue', String(percent));
+                      }}
+                    >
+                      {percent} %
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="charge-preview" aria-live="polite">
+                <span>Calculado</span>
+                <strong>{formatMoney(totalCents, currency)}</strong>
               </div>
             </div>
             <label htmlFor="expense-occurred-at">
@@ -415,6 +596,10 @@ export function CreateExpensePage() {
                       <input type="radio" value="EXACT" {...form.register('splitMode')} />
                       <span>Montos exactos</span>
                     </label>
+                    <label>
+                      <input type="radio" value="PERCENT" {...form.register('splitMode')} />
+                      <span>Porcentaje</span>
+                    </label>
                   </div>
                 </fieldset>
                 <fieldset>
@@ -459,12 +644,39 @@ export function CreateExpensePage() {
                                     }))
                                   }
                                 />
+                              ) : splitMode === 'PERCENT' ? (
+                                <input
+                                  aria-label={`Porcentaje de ${label}`}
+                                  aria-describedby="percentage-error"
+                                  aria-invalid={
+                                    splitMode === 'PERCENT' && percentageTotalBps !== 10_000
+                                  }
+                                  inputMode="decimal"
+                                  placeholder="0.00 %"
+                                  value={percentageValues[participant.id] ?? ''}
+                                  onChange={(change) =>
+                                    setPercentageValues((current) => ({
+                                      ...current,
+                                      [participant.id]: change.target.value,
+                                    }))
+                                  }
+                                />
                               ) : (
                                 <strong>{formatMoney(equalAmount, currency)}</strong>
                               ))}
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                  {splitMode === 'PERCENT' && (
+                    <div className="percentage-total" aria-live="polite">
+                      <strong>Suma: {(percentageTotalBps / 100).toFixed(2)} % / 100.00 %</strong>
+                      {selected.length > 0 && percentageTotalBps !== 10_000 && (
+                        <p className="form-field-error" role="alert" id="percentage-error">
+                          Los porcentajes deben sumar exactamente 100 %.
+                        </p>
+                      )}
                     </div>
                   )}
                 </fieldset>
@@ -644,13 +856,17 @@ export function CreateExpensePage() {
         <aside className="split-summary" aria-live="polite">
           <span className="eyebrow">Conciliación</span>
           <strong>{formatMoney(totalCents, currency)}</strong>
+          <p>
+            Subtotal {formatMoney(subtotalCents, currency)} · Impuesto{' '}
+            {formatMoney(taxCents, currency)} · Propina {formatMoney(tipCents, currency)}
+          </p>
           <h2>Por persona</h2>
-          {personShares.length === 0 ? (
+          {personBreakdown.length === 0 ? (
             <p className="muted">Aún no hay personas asignadas.</p>
           ) : (
             <ul className="split-person-summary">
-              {personShares.map((share) => (
-                <li key={share.eventParticipantId}>
+              {personBreakdown.map((share) => (
+                <li key={share.eventParticipantId} className="person-breakdown">
                   <span>
                     {participantLabel(
                       participants.find(
@@ -658,7 +874,12 @@ export function CreateExpensePage() {
                       )!,
                     )}
                   </span>
-                  <strong>{formatMoney(share.shareCents, currency)}</strong>
+                  <div>
+                    <small>Subtotal {formatMoney(share.shareCents, currency)}</small>
+                    <small>Impuesto {formatMoney(share.taxCents, currency)}</small>
+                    <small>Propina {formatMoney(share.tipCents, currency)}</small>
+                    <strong>Total {formatMoney(share.totalCents, currency)}</strong>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -677,7 +898,9 @@ export function CreateExpensePage() {
                 {selected.length} {selected.length === 1 ? 'participante' : 'participantes'}
               </p>
               <small>
-                El reparto se envía como EXACT con el resultado calculado para cada persona.
+                {splitMode === 'PERCENT'
+                  ? 'Los porcentajes se convierten a puntos básicos y el servidor conserva cada centavo.'
+                  : 'El reparto se envía como EXACT con el resultado calculado para cada persona.'}
               </small>
             </>
           )}
@@ -710,13 +933,24 @@ export function ExpenseDetailPage() {
     labels.get(participantId) || fallbackParticipantLabel(participantId, guestName);
   return (
     <PageHeader
-      eyebrow={expense.data.splitMode === 'EQUAL' ? 'Partes iguales' : 'Montos exactos'}
+      eyebrow={
+        expense.data.splitMode === 'EQUAL'
+          ? 'Partes iguales'
+          : expense.data.splitMode === 'PERCENT'
+            ? 'Por porcentaje'
+            : 'Montos exactos'
+      }
       title={expense.data.title}
     >
       <section className="expense-detail glass-panel">
         <div className="expense-total">
           <span>Total</span>
           <strong>{formatMoney(expense.data.totalCents, expense.data.currency)}</strong>
+        </div>
+        <div className="expense-breakdown" aria-label="Desglose del gasto">
+          <span>Subtotal {formatMoney(expense.data.subtotalCents, expense.data.currency)}</span>
+          <span>Impuesto {formatMoney(expense.data.taxCents, expense.data.currency)}</span>
+          <span>Propina {formatMoney(expense.data.tipCents, expense.data.currency)}</span>
         </div>
         {expense.data.notes && <p className="muted">{expense.data.notes}</p>}
         <h2>Reparto</h2>
@@ -726,7 +960,14 @@ export function ExpenseDetailPage() {
               <span>
                 {labelFor(participant.eventParticipantId, participant.eventParticipant.guestName)}
               </span>
-              <strong>{formatMoney(participant.shareCents, expense.data.currency)}</strong>
+              <div className="person-breakdown-values">
+                <small>
+                  Subtotal {formatMoney(participant.subtotalCents, expense.data.currency)}
+                </small>
+                <small>Impuesto {formatMoney(participant.taxCents, expense.data.currency)}</small>
+                <small>Propina {formatMoney(participant.tipCents, expense.data.currency)}</small>
+                <strong>Total {formatMoney(participant.shareCents, expense.data.currency)}</strong>
+              </div>
             </li>
           ))}
         </ul>

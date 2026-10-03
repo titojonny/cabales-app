@@ -75,6 +75,9 @@ export interface Event {
 export interface ExpenseParticipant {
   id: string;
   eventParticipantId: string;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   shareCents: number;
   eventParticipant: { guestName?: string; groupMemberId?: string };
 }
@@ -87,8 +90,11 @@ export interface Expense {
   title: string;
   notes?: string;
   totalCents: number;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
@@ -112,8 +118,11 @@ export interface ExpenseSummary {
   eventId: string;
   title: string;
   totalCents: number;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
@@ -241,11 +250,20 @@ export interface CreateExpenseInput {
   title: string;
   notes?: string;
   totalCents: number;
+  subtotalCents?: number;
+  taxCents?: number;
+  taxPercentBps?: number;
+  tipCents?: number;
+  tipPercentBps?: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   categoryId?: string;
-  participants: Array<{ eventParticipantId: string; shareCents?: number }>;
+  participants: Array<{
+    eventParticipantId: string;
+    shareCents?: number;
+    percentageBps?: number;
+  }>;
   payers: Array<{ eventParticipantId: string; amountCents: number }>;
   items?: Array<{
     name: string;

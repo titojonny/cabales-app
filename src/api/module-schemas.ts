@@ -246,6 +246,9 @@ export const statisticsSchema = z.object({
   granularity: z.enum(['week', 'month']),
   totals: z.object({
     spentCents: int,
+    subtotalCents: int.optional(),
+    taxCents: int.optional(),
+    tipCents: int.optional(),
     expenseCount: int,
     myShareCents: int,
     myPaidCents: int,

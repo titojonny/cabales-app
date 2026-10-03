@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseMoneyToCents } from './money';
+import { parseMoneyToCents, parsePercentageToBps } from './money';
 
 /** Normaliza texto humano con Unicode NFC, espacios exteriores y espacios repetidos. */
 export function normalizeText(value: string): string {
@@ -111,22 +111,73 @@ export const acceptInvitationSchema = z.object({
 });
 
 /** Esquema base del divisor; la suma exacta se valida con los participantes seleccionados. */
-export const expenseSchema = z.object({
-  title: normalizedText(1, 160, 'El título'),
-  notes: z
-    .string()
-    .transform(normalizeText)
-    .pipe(z.string().max(1000, 'Las notas no pueden superar 1000 caracteres.'))
-    .optional(),
-  amount: z.string().refine((value) => parseMoneyToCents(value) !== null, {
-    message: 'Usa un monto positivo, máximo dos decimales y no más de 21 474 836,47.',
-  }),
-  currency: z.string().regex(/^[A-Z]{3}$/, 'La moneda debe ser un código ISO de tres letras.'),
-  payerId: z.string().uuid('Selecciona quién pagó.'),
-  splitMode: z.enum(['EQUAL', 'EXACT']),
-  occurredAt: z.string().min(1, 'Selecciona la fecha y hora.'),
-  categoryId: z.union([z.literal(''), z.string().uuid('Categoría inválida.')]).optional(),
-});
+export const expenseSchema = z
+  .object({
+    title: normalizedText(1, 160, 'El título'),
+    notes: z
+      .string()
+      .transform(normalizeText)
+      .pipe(z.string().max(1000, 'Las notas no pueden superar 1000 caracteres.'))
+      .optional(),
+    amount: z.string().refine((value) => parseMoneyToCents(value) !== null, {
+      message: 'Usa un monto positivo, máximo dos decimales y no más de 21 474 836,47.',
+    }),
+    subtotal: z
+      .string()
+      .refine((value) => value === '' || parseMoneyToCents(value) !== null, {
+        message: 'El subtotal debe ser un monto positivo válido.',
+      })
+      .optional(),
+    taxMode: z.enum(['AMOUNT', 'PERCENT']),
+    taxValue: z
+      .string()
+      .refine(
+        (value) =>
+          value === '' || /^0([.,]0{1,2})?$/.test(value) || parseMoneyToCents(value) !== null,
+        {
+          message: 'El impuesto debe ser un importe positivo válido.',
+        },
+      ),
+    tipMode: z.enum(['AMOUNT', 'PERCENT']),
+    tipValue: z
+      .string()
+      .refine(
+        (value) =>
+          value === '' || /^0([.,]0{1,2})?$/.test(value) || parseMoneyToCents(value) !== null,
+        {
+          message: 'La propina debe ser un importe positivo válido.',
+        },
+      ),
+    currency: z.string().regex(/^[A-Z]{3}$/, 'La moneda debe ser un código ISO de tres letras.'),
+    payerId: z.string().uuid('Selecciona quién pagó.'),
+    splitMode: z.enum(['EQUAL', 'EXACT', 'PERCENT']),
+    occurredAt: z.string().min(1, 'Selecciona la fecha y hora.'),
+    categoryId: z.union([z.literal(''), z.string().uuid('Categoría inválida.')]).optional(),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.taxMode === 'PERCENT' &&
+      value.taxValue !== '' &&
+      parsePercentageToBps(value.taxValue) === null
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['taxValue'],
+        message: 'El porcentaje del impuesto debe estar entre 0 y 100 %.',
+      });
+    }
+    if (
+      value.tipMode === 'PERCENT' &&
+      value.tipValue !== '' &&
+      parsePercentageToBps(value.tipValue) === null
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['tipValue'],
+        message: 'El porcentaje de propina debe estar entre 0 y 100 %.',
+      });
+    }
+  });
 
 /** Valores validados para solicitar un enlace por correo. */
 export type EmailValues = z.infer<typeof emailOnlySchema>;

@@ -177,8 +177,53 @@ test('abre un gasto con los datos del OCR prellenados y editables', async ({ pag
   await page.goto(`/app/groups/${groupId}/events/${eventId}/expenses/new?ocrJobId=${jobId}`);
   await expect(page.getByRole('heading', { name: 'Revisar gasto escaneado' })).toBeVisible();
   await expect(page.getByLabel('Título')).toHaveValue('Mercado Central');
-  await expect(page.getByRole('textbox', { name: 'Total' })).toHaveValue('12.34');
+  await expect(page.getByRole('textbox', { name: 'Total', exact: true })).toHaveValue('12.34');
   await expect(page.getByLabel('Nombre')).toHaveValue('Cafe');
   await expect(page.getByText('Datos sugeridos por el escaneo')).toBeVisible();
   await expect(page.getByText(/Todo es editable/)).toBeVisible();
+});
+
+test('crea un gasto con porcentaje y muestra la suma accesible', async ({ page }) => {
+  const groupId = responses.group.id;
+  const eventId = responses.event.id;
+  let createdBody: Record<string, unknown> | undefined;
+  await page.route('**/api/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    let data: unknown = [];
+    if (pathname.endsWith('/auth/me')) data = responses.me;
+    else if (pathname === '/api/v1/groups') data = [responses.group];
+    else if (pathname === `/api/v1/groups/${groupId}`) data = responses.groupDetail;
+    else if (pathname === `/api/v1/groups/${groupId}/events/${eventId}`)
+      data = responses.eventDetail;
+    else if (pathname === `/api/v1/groups/${groupId}/categories`) data = responses.categories;
+    else if (
+      pathname === `/api/v1/groups/${groupId}/expenses` &&
+      route.request().method() === 'POST'
+    ) {
+      createdBody = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+      data = responses.expense;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data }),
+    });
+  });
+  await page.goto(`/app/groups/${groupId}/events/${eventId}/expenses/new`);
+  await page.getByLabel('Título').fill('Cena compartida');
+  await page.getByRole('textbox', { name: 'Total', exact: true }).fill('10.00');
+  await page.getByRole('radio', { name: 'Porcentaje' }).check();
+  const checkboxes = page.getByRole('checkbox');
+  await checkboxes.nth(0).check();
+  await checkboxes.nth(1).check();
+  await page.getByLabel('Porcentaje de Ana').fill('60');
+  await page.getByLabel('Porcentaje de Bob').fill('40');
+  await expect(page.getByText('Suma: 100.00 % / 100.00 %')).toBeVisible();
+  await page.locator('#payer').selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Registrar gasto' }).click();
+  await expect.poll(() => createdBody?.splitMode).toBe('PERCENT');
+  await expect(createdBody?.participants).toEqual([
+    { eventParticipantId: responses.eventDetail.participants[0].id, percentageBps: 6000 },
+    { eventParticipantId: responses.eventDetail.participants[1].id, percentageBps: 4000 },
+  ]);
 });
