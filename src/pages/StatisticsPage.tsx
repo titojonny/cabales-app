@@ -70,7 +70,10 @@ export function StatisticsPage() {
     onSuccess: ({ blob, headers }) => {
       downloadBlob(
         blob,
-        filenameFromContentDisposition(headers.get('Content-Disposition'), 'cabales-statistics.csv'),
+        filenameFromContentDisposition(
+          headers.get('Content-Disposition'),
+          'cabales-statistics.csv',
+        ),
       );
     },
   });
@@ -114,14 +117,16 @@ export function StatisticsPage() {
         </label>
       )}
       <Button
-        variant="secondary"
+        variant="primary"
         type="button"
         isDisabled={exportCsv.isPending}
         onPress={() => exportCsv.mutate()}
       >
         {exportCsv.isPending ? 'Exportando…' : 'Exportar CSV'}
       </Button>
-      {exportCsv.isError && <span role="alert">No pudimos exportar las estadísticas. Intenta de nuevo.</span>}
+      {exportCsv.isError && (
+        <span role="alert">No pudimos exportar las estadísticas. Intenta de nuevo.</span>
+      )}
       {exportCsv.isSuccess && <span aria-live="polite">CSV descargado.</span>}
     </div>
   );

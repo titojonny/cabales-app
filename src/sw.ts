@@ -1,6 +1,10 @@
 /// <reference lib="webworker" />
 
-import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
+import {
+  cleanupOutdatedCaches,
+  createHandlerBoundToURL,
+  precacheAndRoute,
+} from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkOnly } from 'workbox-strategies';
 
@@ -18,18 +22,23 @@ registerRoute(
     denylist: [/^\/api\//],
   }),
 );
-registerRoute(
-  ({ url }) => url.pathname.includes('/api/v1/'),
-  new NetworkOnly(),
-  'GET',
-);
+const apiPath = ({ url }: { url: URL }) => url.pathname.startsWith('/api/v1/');
+for (const method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const) {
+  registerRoute(apiPath, new NetworkOnly(), method);
+}
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_BODY_LENGTH = 240;
 
 function cleanText(value: unknown, fallback: string, maxLength: number): string {
   if (typeof value !== 'string') return fallback;
-  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength);
+  const cleaned = Array.from(value, (character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127 ? ' ' : character;
+  })
+    .join('')
+    .trim()
+    .slice(0, maxLength);
   return cleaned || fallback;
 }
 
@@ -37,7 +46,10 @@ function safeInternalUrl(value: unknown): string {
   if (typeof value !== 'string') return '/app/notifications';
   try {
     const url = new URL(value, self.location.origin);
-    return url.origin === self.location.origin ? `${url.pathname}${url.search}${url.hash}` : '/app/notifications';
+    const isAppPath = url.pathname === '/app' || url.pathname.startsWith('/app/');
+    return url.origin === self.location.origin && isAppPath
+      ? `${url.pathname}${url.search}${url.hash}`
+      : '/app/notifications';
   } catch {
     return '/app/notifications';
   }

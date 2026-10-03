@@ -20,6 +20,16 @@
   --radius: 24px;
 }
 
+/* Las variantes neutras deben conservar contraste AA sobre el tema nocturno. */
+.button--secondary,
+.button--tertiary {
+  --button-bg: #293761;
+  --button-bg-hover: #374b7a;
+  --button-bg-pressed: #435d92;
+  --button-fg: var(--color-ink);
+  border: 1px solid rgba(222, 228, 255, 0.28);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -481,12 +491,11 @@ textarea:hover {
 /* Shell: navegación inferior en móvil y riel persistente en escritorio. */
 .app-shell {
   min-height: 100vh;
-  padding-bottom: calc(82px + env(safe-area-inset-bottom));
 }
 .app-content {
   width: 100%;
   min-height: 100vh;
-  padding: calc(4.2rem + env(safe-area-inset-top)) 1rem 2rem;
+  padding: calc(4.2rem + env(safe-area-inset-top)) 1rem calc(7rem + env(safe-area-inset-bottom));
 }
 .side-rail {
   display: none;
@@ -1832,5 +1841,407 @@ legend {
   .admin-grid,
   .account-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/*
+ * Capa responsive transversal.
+ * Las pantallas de los módulos comparten estas restricciones para que una etiqueta,
+ * identificador o acción larga nunca fuerce el ancho del documento.
+ */
+html,
+body {
+  overflow-x: hidden;
+}
+
+main,
+section,
+article,
+form,
+fieldset,
+.page,
+.app-content,
+.page-header,
+.page-header > * {
+  min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button,
+a {
+  max-width: 100%;
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+li,
+dt,
+dd,
+label,
+legend {
+  overflow-wrap: anywhere;
+}
+
+.button,
+button[data-slot='button'] {
+  min-width: 44px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.page {
+  width: min(100%, 1180px);
+}
+
+.app-content {
+  padding-inline: max(clamp(1rem, 3vw, 3rem), env(safe-area-inset-left))
+    max(clamp(1rem, 3vw, 3rem), env(safe-area-inset-right));
+}
+
+.auth-page,
+.legal-page {
+  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+}
+
+.auth-page {
+  padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+.legal-page {
+  padding-top: env(safe-area-inset-top);
+}
+
+.auth-card,
+.form-card,
+.expense-detail,
+.members-card,
+.category-card,
+.stats-card,
+.budget-card,
+.push-settings,
+.preferences,
+.invitation-preview {
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.page-header h1 {
+  max-width: 100%;
+  font-size: clamp(1.85rem, 6vw, 3.8rem);
+}
+
+.button-row,
+.row-actions,
+.verify-banner,
+.section-heading,
+.filter-bar,
+.expense-total,
+.participant,
+.document-row,
+.document-main {
+  min-width: 0;
+}
+
+.button-row > .button,
+.button-row > button[data-slot='button'],
+.row-actions > .button,
+.row-actions > button[data-slot='button'] {
+  min-width: 44px;
+}
+
+.inline-entry {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.event-row {
+  grid-template-columns: 54px minmax(0, 1fr);
+}
+
+.settlement-row {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+
+.expense-total {
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.expense-total strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.section-heading select {
+  min-width: min(10rem, 100%);
+}
+
+.tabs {
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.invitation-list > li,
+.cabuda-row,
+.movement-list > li,
+.notification-list > li,
+.privacy-row,
+.document-row,
+.budget-card,
+.achievement,
+.stats-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.row-actions {
+  max-width: 100%;
+}
+
+.row-actions > * {
+  min-width: 0;
+}
+
+.verify-banner > svg {
+  flex: 0 0 auto;
+}
+
+.verify-banner p {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.chip-remove {
+  width: 44px;
+  height: 44px;
+}
+
+.chip-list .status-chip {
+  min-height: 44px;
+}
+
+.password-toggle,
+.network-banner button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.preferences td {
+  min-width: 44px;
+}
+
+.preferences td input {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+
+.bottom-nav {
+  right: max(0.7rem, env(safe-area-inset-right));
+  bottom: calc(0.7rem + env(safe-area-inset-bottom));
+  left: max(0.7rem, env(safe-area-inset-left));
+}
+
+@media (max-width: 619px) {
+  .form-card,
+  .expense-detail,
+  .members-card,
+  .category-card,
+  .stats-card,
+  .budget-card,
+  .push-settings,
+  .preferences,
+  .invitation-preview {
+    padding: clamp(1rem, 4vw, 1.4rem);
+  }
+
+  .event-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .event-row .button,
+  .settlement-row > .button,
+  .cabuda-row > .button,
+  .budget-card footer .button,
+  .budget-card footer > [data-slot='button'] {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .participant {
+    flex-wrap: wrap;
+  }
+
+  .participant > input {
+    flex: 1 1 8rem;
+  }
+
+  .document-row .row-actions,
+  .invitation-list .row-actions,
+  .notification-list .row-actions,
+  .cabuda-list .row-actions,
+  .movement-list .row-actions {
+    width: 100%;
+  }
+
+  .document-row .row-actions > *,
+  .invitation-list .row-actions > *,
+  .notification-list .row-actions > *,
+  .cabuda-list .row-actions > *,
+  .movement-list .row-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .section-heading {
+    align-items: stretch;
+  }
+
+  .section-heading select {
+    width: 100%;
+  }
+
+  .filter-bar > label,
+  .filter-bar > button,
+  .filter-bar > [data-slot='button'] {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .budget-card footer {
+    display: grid;
+    gap: 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-header {
+    gap: 0.5rem;
+  }
+
+  .brand {
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .public-header .button {
+    padding-inline: 0.65rem;
+  }
+
+  .button-row > .button,
+  .button-row > button[data-slot='button'] {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .inline-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-entry > * {
+    width: 100%;
+  }
+
+  .verify-banner {
+    align-items: stretch;
+  }
+
+  .verify-banner p,
+  .verify-banner button,
+  .verify-banner [data-slot='button'] {
+    width: 100%;
+  }
+
+  .verify-banner p {
+    flex-basis: 100%;
+  }
+
+  .public-footer {
+    flex-wrap: wrap;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 620px) {
+  .auth-card,
+  .form-card,
+  .expense-detail {
+    padding: clamp(1.35rem, 2.5vw, 2rem);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .app-content {
+    padding-inline: max(clamp(1.25rem, 4vw, 2.5rem), env(safe-area-inset-left))
+      max(clamp(1.25rem, 4vw, 2.5rem), env(safe-area-inset-right));
+  }
+}
+
+@media (min-width: 920px) {
+  .side-rail {
+    top: max(1rem, env(safe-area-inset-top));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    left: max(1rem, env(safe-area-inset-left));
+  }
+
+  .side-rail .nav-item {
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1440px) {
+  .hero {
+    max-width: 1280px;
+    gap: clamp(3rem, 7vw, 7rem);
+  }
+
+  .page {
+    max-width: 1240px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .app-content {
+    padding-inline: max(3rem, 4vw);
+  }
+
+  .page {
+    max-width: 1280px;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 919px) {
+  .app-content {
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+  }
+
+  .bottom-nav {
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }

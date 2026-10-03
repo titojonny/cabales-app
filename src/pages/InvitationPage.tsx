@@ -201,19 +201,18 @@ export function InvitationList({ groupId }: { groupId: string }) {
   );
 }
 
-/** Extrae el token de un enlace completo o de un token pegado directamente. */
+/** Extrae el token de un enlace con fragmento o de un token pegado directamente. */
 export function extractInvitationToken(value: string): string {
   const trimmed = value.trim();
-  const fromHash = /[#?&]token=([A-Za-z0-9_-]+)/.exec(trimmed)?.[1];
-  return fromHash ?? trimmed;
+  const fromHash = /#token=([A-Za-z0-9_-]+)/.exec(trimmed)?.[1];
+  return fromHash ?? (/^[A-Za-z0-9_-]+$/.test(trimmed) ? trimmed : '');
 }
 
-/** Lee el token del fragmento (o de `?token=` por compatibilidad) y lo quita del historial. */
+/** Lee el token del fragmento y lo quita del historial sin enviarlo en una petición URL. */
 function useInitialInvitationToken(): string {
   const [token] = useState(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
-    const query = new URLSearchParams(window.location.search).get('token');
-    const value = hash ?? query ?? '';
+    const value = hash ?? '';
     if (value) window.history.replaceState(window.history.state, '', window.location.pathname);
     return value;
   });

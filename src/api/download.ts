@@ -6,11 +6,16 @@ export function filenameFromContentDisposition(value: string | null, fallback: s
   const plain = value.match(/filename=([^;]+)/i)?.[1]?.trim();
   let filename = fallback;
   try {
-    filename = encoded ? decodeURIComponent(encoded) : quoted ?? plain ?? fallback;
+    filename = encoded ? decodeURIComponent(encoded) : (quoted ?? plain ?? fallback);
   } catch {
     filename = quoted ?? plain ?? fallback;
   }
-  const safe = filename.replace(/[\\/\u0000-\u001f\u007f]/g, '_').trim();
+  const safe = Array.from(filename, (character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127 || character === '\\' || character === '/' ? '_' : character;
+  })
+    .join('')
+    .trim();
   return safe || fallback;
 }
 

@@ -8,7 +8,10 @@ export function ProtectedRoute() {
   const auth = useAuth();
   const location = useLocation();
   // Conserva el fragmento: las invitaciones llevan el token en `#token=`.
-  const returnPath = `${location.pathname}${location.search}${location.hash}`;
+  const returnSearch = new URLSearchParams(location.search);
+  returnSearch.delete('token');
+  const search = returnSearch.toString();
+  const returnPath = `${location.pathname}${search ? `?${search}` : ''}${location.hash}`;
   if (auth.isPending)
     return (
       <main className="centered">

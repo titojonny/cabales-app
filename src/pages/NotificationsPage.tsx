@@ -9,13 +9,7 @@ import type {
   NotificationType,
 } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
-import {
-  ErrorMessage,
-  ErrorState,
-  formatDate,
-  LoadingState,
-  StatusPanel,
-} from '../components/ui';
+import { ErrorMessage, ErrorState, formatDate, LoadingState, StatusPanel } from '../components/ui';
 import {
   applicationServerKey,
   getNotificationPermission,
@@ -81,7 +75,7 @@ function PushSettings() {
   const [error, setError] = useState<unknown>();
   const [retryAction, setRetryAction] = useState<'activate' | 'deactivate' | null>(null);
   const subscriptionRef = useRef<PushSubscription | null>(null);
-  const endpointRef = useRef<string>();
+  const endpointRef = useRef<string | undefined>(undefined);
   const errorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -129,6 +123,7 @@ function PushSettings() {
     setBusy(true);
     setError(undefined);
     setRetryAction(null);
+    let createdSubscription: PushSubscription | null = null;
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
@@ -137,20 +132,27 @@ function PushSettings() {
       }
       const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await registration.pushManager.subscribe({
+      let subscription = existing;
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: applicationServerKey(config.data.publicKey),
-        }));
+        });
+        createdSubscription = subscription;
+      }
       await modulesApi.createPushSubscription(subscriptionPayload(subscription));
       subscriptionRef.current = subscription;
       endpointRef.current = subscription.endpoint;
       setState('enabled');
     } catch (cause) {
-      if (!subscriptionRef.current) {
-        const registration = await navigator.serviceWorker.ready.catch(() => undefined);
-        await registration?.pushManager.getSubscription().then((subscription) => subscription?.unsubscribe()).catch(() => undefined);
+      if (createdSubscription) {
+        try {
+          const registration = await navigator.serviceWorker.ready.catch(() => undefined);
+          const current = await registration?.pushManager.getSubscription();
+          if (current?.endpoint === createdSubscription.endpoint) await current.unsubscribe();
+        } catch {
+          // La suscripción fallida no debe ocultar el error original de activación.
+        }
       }
       setError(cause);
       setRetryAction('activate');
@@ -164,7 +166,11 @@ function PushSettings() {
     setError(undefined);
     setRetryAction(null);
     try {
-      const subscription = subscriptionRef.current ?? (await navigator.serviceWorker.ready).pushManager.getSubscription();
+      let subscription = subscriptionRef.current;
+      if (!subscription) {
+        const registration = await navigator.serviceWorker.ready;
+        subscription = await registration.pushManager.getSubscription();
+      }
       const endpoint = subscription?.endpoint ?? endpointRef.current;
       if (subscription) await subscription.unsubscribe();
       if (endpoint) await modulesApi.deletePushSubscription(endpoint);
@@ -183,16 +189,21 @@ function PushSettings() {
   if (config.isPending) description = 'Comprobando disponibilidad…';
   else if (config.isError) description = 'No pudimos consultar la configuración push.';
   else if (!config.data?.enabled)
-    description = 'Las notificaciones push están deshabilitadas en este servidor. Los avisos siguen dentro de la app.';
+    description =
+      'Las notificaciones push están deshabilitadas en este servidor. Los avisos siguen dentro de la app.';
   else if (!config.data.publicKey)
-    description = 'El servidor anunció push, pero no entregó una clave pública válida. Intenta más tarde.';
+    description =
+      'El servidor anunció push, pero no entregó una clave pública válida. Intenta más tarde.';
   else if (capability.reason === 'ios-install')
-    description = 'En iPhone o iPad, instala Cabales como app desde Safari para activar avisos push.';
+    description =
+      'En iPhone o iPad, instala Cabales como app desde Safari para activar avisos push.';
   else if (capability.reason === 'secure-context')
     description = 'Los avisos push requieren una conexión segura (HTTPS).';
   else if (state === 'denied')
-    description = 'El permiso está denegado. Para reactivarlo, abre los ajustes del sitio en tu navegador, permite Notificaciones y vuelve a pulsar Activar.';
-  else if (state === 'enabled') description = 'Recibirás avisos importantes aunque no tengas Cabales abierto.';
+    description =
+      'El permiso está denegado. Para reactivarlo, abre los ajustes del sitio en tu navegador, permite Notificaciones y vuelve a pulsar Activar.';
+  else if (state === 'enabled')
+    description = 'Recibirás avisos importantes aunque no tengas Cabales abierto.';
   else description = 'Los avisos también seguirán disponibles dentro de la app.';
 
   const canActivate = Boolean(
@@ -218,7 +229,7 @@ function PushSettings() {
           </Button>
         </div>
       )}
-      {error && (
+      {Boolean(error) && (
         <div ref={errorRef} className="push-actions" tabIndex={-1}>
           <ErrorMessage error={error} />
           <Button
@@ -291,8 +302,8 @@ function Preferences() {
             <tr>
               <th scope="col">Aviso</th>
               <th scope="col">En la app</th>
-              <th scope="col">Correo</th>
               <th scope="col">Push</th>
+              <th scope="col">Correo</th>
             </tr>
           </thead>
           <tbody>

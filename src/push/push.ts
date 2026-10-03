@@ -1,10 +1,5 @@
 export type PushPermissionState =
-  | 'disabled'
-  | 'unsupported'
-  | 'permission-not-requested'
-  | 'denied'
-  | 'not-subscribed'
-  | 'enabled';
+  'disabled' | 'unsupported' | 'permission-not-requested' | 'denied' | 'not-subscribed' | 'enabled';
 
 export interface PushCapability {
   supported: boolean;
@@ -64,11 +59,11 @@ export function permissionState(subscribed = false): PushPermissionState {
 }
 
 /** Convierte la clave VAPID pública base64url al formato requerido por PushManager. */
-export function applicationServerKey(value: string): Uint8Array {
+export function applicationServerKey(value: string): ArrayBuffer {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
   const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer as ArrayBuffer;
 }
 
 export function subscriptionPayload(subscription: PushSubscription) {

@@ -43,6 +43,7 @@ function NavItems({ items, unread }: { items: NavItem[]; unread: number }) {
         key={item.to}
         to={item.to}
         end={item.end}
+        aria-label={`${item.label}${showBadge ? `, ${unread} sin leer` : ''}`}
         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
       >
         <span className="nav-icon">
@@ -54,7 +55,6 @@ function NavItems({ items, unread }: { items: NavItem[]; unread: number }) {
           )}
         </span>
         <span>{item.label}</span>
-        {showBadge && <span className="sr-only">, {unread} sin leer</span>}
       </NavLink>
     );
   });

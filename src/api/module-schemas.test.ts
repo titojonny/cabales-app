@@ -69,4 +69,20 @@ describe('contrato de módulos con respuestas reales', () => {
       false,
     );
   });
+
+  it('acepta categorias globales y propuestas OCR con items nombrados', () => {
+    expect(
+      modules.categorySchema.parse({
+        id: '10000000-0000-4000-8000-000000000001',
+        groupId: null,
+        name: 'Comida',
+        color: null,
+      }).groupId,
+    ).toBeNull();
+    expect(
+      modules.ocrProposalSchema.parse({
+        items: [{ name: 'Pupusa', amountCents: 250 }],
+      }).items,
+    ).toEqual([{ name: 'Pupusa', amountCents: 250 }]);
+  });
 });

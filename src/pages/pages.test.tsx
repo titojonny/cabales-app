@@ -4,9 +4,16 @@ import responses from '../test/fixtures/api-responses.json';
 import { apiResponse, renderPage, routeFetch } from '../test/render';
 import { ForgotPasswordPage } from './AuthPages';
 import { CabudasPage } from './CabudasPage';
-import { AcceptInvitationPage } from './InvitationPage';
+import { AcceptInvitationPage, extractInvitationToken } from './InvitationPage';
 import { OcrProviderNotice } from './DocsPage';
 import { StatisticsPage } from './StatisticsPage';
+
+describe('tokens de invitacion', () => {
+  it('no acepta tokens pegados en query strings', () => {
+    expect(extractInvitationToken('?token=' + 'x'.repeat(43))).toBe('');
+    expect(extractInvitationToken('#token=' + 'x'.repeat(43))).toBe('x'.repeat(43));
+  });
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -68,6 +75,34 @@ describe('Cabudas', () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText(/4,50|4\.50/).length).toBeGreaterThan(0));
   });
+
+  it('interpreta correctamente el saldo estimado de eventos abiertos', async () => {
+    routeFetch({
+      '/api/v1/cabudas/summary': () =>
+        apiResponse({
+          ...responses.cabudas,
+          totals: [],
+          groups: [],
+          people: [],
+          simplifiedTransfers: [],
+          pendingTransfers: [],
+          openEvents: [
+            {
+              eventId: 'ac74e322-b190-44c6-9328-c56e9dbf7956',
+              eventName: 'Evento abierto',
+              groupId: 'dfd0b575-87c4-4365-adce-b9ac092ef497',
+              groupName: 'G1',
+              currency: 'USD',
+              myNetCents: 450,
+            },
+          ],
+        }),
+      '/api/v1/cabudas/history': () => apiResponse([], 200, { nextCursor: null }),
+    });
+    renderPage(<CabudasPage />, '/app/cabudas');
+    expect(await screen.findByText(/Debes/)).toBeInTheDocument();
+    expect(screen.queryByText(/Te deben/)).not.toBeInTheDocument();
+  });
 });
 
 describe('OCR y estadísticas', () => {
@@ -109,8 +144,9 @@ describe('OCR y estadísticas', () => {
           },
         }),
     });
-    render(<StatisticsPage />);
+    renderPage(<StatisticsPage />);
     const exportButton = await screen.findByRole('button', { name: 'Exportar CSV' });
+    expect(exportButton).toBeEnabled();
     fireEvent.click(exportButton);
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(

@@ -16,7 +16,8 @@ const userRef = z.object({ id, displayName: z.string() });
 /** Categoría propia del grupo. */
 export const categorySchema = z.object({
   id,
-  groupId: id,
+  // Las categorías globales llegan con groupId=null y siguen siendo válidas para el grupo.
+  groupId: id.nullable(),
   name: z.string(),
   color: z.string().nullable(),
 });
@@ -137,7 +138,8 @@ export const ocrProposalSchema = z.object({
   totalCents: int.nullable().optional(),
   currency: z.string().nullable().optional(),
   occurredAt: z.string().nullable().optional(),
-  items: z.array(z.object({ description: z.string(), amountCents: int })).default([]),
+  // El proveedor de la API usa `name` para mantener el contrato con OCR y el modelo de gastos.
+  items: z.array(z.object({ name: z.string(), amountCents: int })).default([]),
   confidence: z.number().min(0).max(1).optional(),
 });
 export const ocrJobSchema = z.object({

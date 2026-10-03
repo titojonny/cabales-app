@@ -179,8 +179,8 @@ export function CabudasPage() {
                       </Link>
                       <small>{event.groupName}</small>
                     </span>
-                    <strong className={event.myNetCents < 0 ? 'negative' : 'positive'}>
-                      {event.myNetCents > 0 ? 'Te deben ' : event.myNetCents < 0 ? 'Debes ' : ''}
+                    <strong className={event.myNetCents > 0 ? 'negative' : 'positive'}>
+                      {event.myNetCents > 0 ? 'Debes ' : event.myNetCents < 0 ? 'Te deben ' : ''}
                       {formatMoney(Math.abs(event.myNetCents), event.currency)}
                     </strong>
                   </li>
