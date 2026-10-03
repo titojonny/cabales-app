@@ -106,11 +106,25 @@ export const createdMovementSchema = z.object({
 });
 
 const access = z.enum(['VIEW', 'EDIT', 'MANAGE']);
+export const DOCUMENT_CATEGORIES = [
+  'IDENTIDAD',
+  'VIAJE',
+  'SEGURO',
+  'VEHICULO',
+  'SALUD',
+  'HOGAR',
+  'FINANZAS',
+  'OTRO',
+] as const;
+export const documentCategorySchema = z.enum(DOCUMENT_CATEGORIES);
 
 /** Documento privado; la clave de almacenamiento nunca llega al cliente. */
 export const documentSchema = z.object({
   id,
   name: z.string(),
+  category: documentCategorySchema.default('OTRO'),
+  expiresAt: nullableDate.default(null),
+  expiryNoticeDays: z.array(int.positive()).default([30, 7]),
   mimeType: z.string(),
   sizeBytes: int.nullable(),
   groupId: id.nullable(),
@@ -119,6 +133,9 @@ export const documentSchema = z.object({
   settlementId: id.nullable(),
   createdAt: date,
   updatedAt: date,
+  lastAccessedAt: nullableDate.default(null),
+  isLegacy: z.boolean().default(false),
+  isPinned: z.boolean().default(false),
   owner: userRef,
   access,
 });
@@ -128,9 +145,33 @@ export const documentGrantSchema = z.object({
   userId: id,
   displayName: z.string(),
   access,
+  expiresAt: nullableDate.default(null),
   createdAt: date,
 });
 export const documentGrantListSchema = z.array(documentGrantSchema);
+export const sharedLinkSchema = z.object({
+  id,
+  expiresAt: date,
+  maxAccesses: int.nullable(),
+  accessCount: int,
+  lastAccessAt: nullableDate,
+  revokedAt: nullableDate,
+  createdAt: date,
+  url: z.string().url().optional(),
+});
+export const sharedLinkListSchema = z.array(sharedLinkSchema);
+export const sharedDocumentSchema = z.object({
+  name: z.string(),
+});
+export const documentLockStatusSchema = z.object({
+  enabled: z.boolean(),
+  pinEnabled: z.boolean(),
+  webauthnEnabled: z.boolean(),
+  webauthnAvailable: z.boolean(),
+  unlockedUntil: nullableDate,
+  unlockTtlMinutes: int,
+});
+export const webAuthnOptionsSchema = z.record(z.string(), z.unknown());
 
 /** Propuesta del OCR: solo sugiere datos, nunca crea ni modifica gastos. */
 export const ocrProposalSchema = z.object({
@@ -299,6 +340,8 @@ export const NOTIFICATION_TYPES = [
   'fund.movement',
   'ocr.finished',
   'privacy.updated',
+  'document.expiring',
+  'document.expired',
   'achievement.unlocked',
   'event.reminder',
 ] as const;
@@ -369,6 +412,10 @@ export type FundMovementType = z.output<typeof movementType>;
 export type Document = z.output<typeof documentSchema>;
 export type DocumentAccess = z.output<typeof access>;
 export type DocumentGrant = z.output<typeof documentGrantSchema>;
+export type SharedLink = z.output<typeof sharedLinkSchema>;
+export type SharedDocument = z.output<typeof sharedDocumentSchema>;
+export type DocumentLockStatus = z.output<typeof documentLockStatusSchema>;
+export type WebAuthnOptions = z.output<typeof webAuthnOptionsSchema>;
 export type OcrJob = z.output<typeof ocrJobSchema>;
 export type CabudasSummary = z.output<typeof cabudasSummarySchema>;
 export type CabudasTransfer = z.output<typeof cabudasTransferSchema>;

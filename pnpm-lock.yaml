@@ -20,6 +20,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.1
         version: 5.9.1(ajv@8.20.0)(react-hook-form@7.85.0(react@19.2.8))(zod@4.4.3)
+      '@simplewebauthn/browser':
+        specifier: ^14.0.0
+        version: 14.0.0
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.50.0))
@@ -1383,6 +1386,9 @@ packages:
     resolution: {integrity: sha512-/gDJaRs4gl0NPIwqCz+6PkpmhhjRAD2j6P4rSNHBzUkO3naEx2mIU0pRle1vUNRQ7mE/+8OOeXLTv/J56FKiQg==}
     cpu: [x64]
     os: [win32]
+
+  '@simplewebauthn/browser@14.0.0':
+    resolution: {integrity: sha512-1odWVqeEBTl7lJ9zMKLEsmTlnyrDO5iRcTvfMKKk1WThUnp/i8JJdffdj2icP+tty159s4PgwE3BiMoEW9NFow==}
 
   '@spectrum-icons/ui@3.7.2':
     resolution: {integrity: sha512-7IuSHO+Ck8gJUIGIXqDcDIU4R8RHRUZhlfz8AwN1rSdCEvdgp6DWYN0LDTMrWh7TN/H5hrJ7oDO/gUpR3TnBjw==}
@@ -4618,6 +4624,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.5':
     optional: true
+
+  '@simplewebauthn/browser@14.0.0': {}
 
   '@spectrum-icons/ui@3.7.2(@adobe/react-spectrum@3.47.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:

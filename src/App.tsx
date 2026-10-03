@@ -62,6 +62,9 @@ const CabudasPage = lazy(() =>
 const DocsPage = lazy(() =>
   import('./pages/DocsPage').then(({ DocsPage }) => ({ default: DocsPage })),
 );
+const SharedDocumentPage = lazy(() =>
+  import('./pages/DocsPage').then(({ SharedDocumentPage }) => ({ default: SharedDocumentPage })),
+);
 const FundDetailPage = lazy(() =>
   import('./pages/FundPages').then(({ FundDetailPage }) => ({ default: FundDetailPage })),
 );
@@ -118,6 +121,7 @@ export function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/share/documents/:token" element={<SharedDocumentPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppShell />}>
             <Route index element={<DashboardPage />} />

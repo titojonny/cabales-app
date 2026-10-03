@@ -1,5 +1,13 @@
 # Cabales
 
+## P5: Docs
+
+La biblioteca de documentos permite filtrar por categoría (`IDENTIDAD`, `VIAJE`, `SEGURO`, `VEHICULO`, `SALUD`, `HOGAR`, `FINANZAS`, `OTRO`), fijar documentos, consultar recientes y configurar vencimiento. La descarga usa la API autenticada para que el servidor autorice y descifre el contenido; no se guarda una URL directa de S3.
+
+Los enlaces compartidos se gestionan desde cada documento: caducidad de hasta 30 días, límite opcional, copiar y revocar. La ruta pública solo muestra el nombre y el botón de descarga.
+
+Docs puede protegerse desde Cuenta con PIN de 6–12 dígitos o passkey/biometría cuando el navegador lo soporta. El desbloqueo es reciente y ligado a la sesión.
+
 ## P3: agenda de eventos
 
 El detalle del evento permite editar fechas de inicio/fin, descripción, ubicación, Maps HTTPS, zona horaria y enlaces. También presenta botones RSVP accesibles (`PENDING`, `GOING`, `MAYBE`, `DECLINED`) con el estado propio y los recuentos, asistentes agrupados por estado, configuración de hasta cinco recordatorios y acciones de cancelar/eliminar con confirmación. La API mantiene la autorización; la app solo oculta controles cuando conoce el rol y muestra errores reales del servidor.
@@ -12,7 +20,7 @@ El divisor admite `EQUAL`, `EXACT` y `PERCENT`, con suma visible de porcentajes 
 
 ## Estado del MVP
 
-Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Cabudas, Docs, Estadísticas y Logros están integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
+Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Docs está conectado a la API con filtros, vencimiento, enlaces temporales y bloqueo; Cabudas, Estadísticas y Logros siguen integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
 
 No existe modo demo activo. Sin una API compatible, la aplicación compila y sirve la landing y los formularios públicos, mientras el área privada presenta un error controlado al no poder verificar la sesión.
 
@@ -168,7 +176,7 @@ Limitaciones conocidas del MVP:
 - No existe envío de correo: OWNER/ADMIN debe compartir manualmente el enlace de invitación mostrado una sola vez. El token se transporta en el fragmento de URL para no enviarlo en Referer, pero sigue siendo un bearer token y debe compartirse únicamente con la persona destinataria.
 - Eliminar integrantes no está implementado; el divisor usa el padrón devuelto por el detalle de evento.
 - Crear liquidaciones puede devolver 403 para miembros sin rol OWNER/ADMIN; la API conserva la decisión de autorización.
-- Cabudas, Docs, Estadísticas y Logros quedan pendientes y no realizan consultas.
+- Cabudas, Estadísticas y Logros quedan pendientes y no realizan consultas; Docs ya dispone de biblioteca, cifrado servido por API, enlaces temporales y bloqueo.
 - No hay persistencia offline de datos remotos, datos demo ni escrituras offline.
 - Los nombres registrados en detalles financieros se enriquecen consultando el evento; si esa consulta falla, se presenta `Participante` con ID corto sin inventar identidad.
 
