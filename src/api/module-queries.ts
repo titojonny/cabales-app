@@ -20,6 +20,7 @@ export const moduleKeys = {
   cabudas: ['cabudas'] as const,
   cabudasHistory: (status: string) => ['cabudas', 'history', status] as const,
   statistics: (filters: Record<string, string | undefined>) => ['statistics', filters] as const,
+  incomes: (filters: Record<string, string | undefined>) => ['incomes', filters] as const,
   notifications: (status: string) => ['notifications', status] as const,
   notificationsRoot: ['notifications'] as const,
   unreadCount: ['notifications', 'unread'] as const,
@@ -71,6 +72,11 @@ export const moduleQueries = {
     queryOptions({ queryKey: moduleKeys.pushConfig, queryFn: modulesApi.pushConfig }),
   achievements: () =>
     queryOptions({ queryKey: moduleKeys.achievements, queryFn: modulesApi.achievements }),
+  incomes: (filters: { from?: string; to?: string; currency?: string } = {}) =>
+    queryOptions({
+      queryKey: moduleKeys.incomes(filters),
+      queryFn: () => modulesApi.incomes(filters),
+    }),
   privacyRequests: () =>
     queryOptions({ queryKey: moduleKeys.privacyRequests, queryFn: modulesApi.privacyRequests }),
 };

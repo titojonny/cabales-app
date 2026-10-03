@@ -287,7 +287,93 @@ export const statisticsSchema = z.object({
       alert,
     }),
   ),
+  comparison: z
+    .object({
+      period: z.object({ from: date, to: date }).optional(),
+      total: z.object({
+        currentCents: int,
+        previousCents: int,
+        absoluteCents: int,
+        percentage: z.number().nullable(),
+      }),
+      byCategory: z.array(
+        z.object({
+          categoryId: id.nullable(),
+          name: z.string(),
+          color: z.string().nullable(),
+          currentCents: int,
+          previousCents: int,
+          absoluteCents: int,
+          percentage: z.number().nullable(),
+        }),
+      ),
+    })
+    .optional(),
+  projection: z
+    .object({
+      month: z.string(),
+      asOf: date,
+      daysElapsed: int,
+      daysRemaining: int,
+      currentMonthSpentCents: int,
+      dailyRateCents: int,
+      recurrentPendingCents: int,
+      recurrentPending: z.array(
+        z.object({ id, title: z.string(), amountCents: int, nextRunAt: date }),
+      ),
+      remainingProjectionCents: int,
+      projectedMonthTotalCents: int,
+      methodology: z.string(),
+    })
+    .optional(),
+  incomeSummary: z
+    .object({
+      from: date,
+      to: date,
+      incomeCents: int,
+      expenseCents: int,
+      balanceCents: int,
+      byCategory: z.array(z.object({ category: z.string(), incomeCents: int, count: int })),
+    })
+    .optional(),
+  monthlyIncomeSummary: z
+    .object({
+      from: date,
+      to: date,
+      incomeCents: int,
+      expenseCents: int,
+      balanceCents: int,
+      byCategory: z.array(z.object({ category: z.string(), incomeCents: int, count: int })),
+    })
+    .optional(),
+  funds: z
+    .array(
+      z.object({
+        fundId: id,
+        name: z.string(),
+        groupId: id,
+        currency,
+        balanceCents: int,
+        contributionsCents: int,
+        withdrawalsCents: int,
+        adjustmentsCents: int,
+        movementCount: int,
+      }),
+    )
+    .optional(),
 });
+
+export const incomeSchema = z.object({
+  id,
+  amountCents: int,
+  date,
+  category: z.string(),
+  note: z.string().nullable(),
+  currency,
+  createdAt: date,
+  updatedAt: date,
+});
+export const incomeListSchema = z.array(incomeSchema);
 
 /** Tipos de aviso con preferencias configurables. */
 export const NOTIFICATION_TYPES = [
@@ -373,6 +459,7 @@ export type OcrJob = z.output<typeof ocrJobSchema>;
 export type CabudasSummary = z.output<typeof cabudasSummarySchema>;
 export type CabudasTransfer = z.output<typeof cabudasTransferSchema>;
 export type Statistics = z.output<typeof statisticsSchema>;
+export type Income = z.output<typeof incomeSchema>;
 export type Notification = z.output<typeof notificationSchema>;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationPreferences = z.output<typeof notificationPreferencesSchema>;
