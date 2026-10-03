@@ -4,6 +4,11 @@ import type { ZodType } from 'zod';
 
 const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
 const API_BASE_URL = (configuredBaseUrl || '/api/v1').replace(/\/$/, '');
+
+/** Construye URLs de navegación manteniendo el origen configurable de la API. */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
 const configuredCsrfCookieName = import.meta.env.VITE_CSRF_COOKIE_NAME?.trim();
 const CSRF_COOKIE_NAME =
   configuredCsrfCookieName && /^[A-Za-z0-9_-]{1,128}$/.test(configuredCsrfCookieName)
@@ -113,7 +118,7 @@ export async function requestFile(
   const init = options;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       ...init,
       method,
       headers,
@@ -123,7 +128,9 @@ export async function requestFile(
   } catch {
     recordTelemetry({ event: 'api_failure', operation, requestId });
     throw new HttpError(
-      navigator.onLine ? 'No pudimos descargar el archivo. Intenta de nuevo.' : 'No hay conexión. El archivo no se descargó.',
+      navigator.onLine
+        ? 'No pudimos descargar el archivo. Intenta de nuevo.'
+        : 'No hay conexión. El archivo no se descargó.',
       0,
       'NETWORK_ERROR',
     );
@@ -165,7 +172,7 @@ export async function requestWithMeta<T>(
   const { body, rawBody, schema, ...init } = options;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       ...init,
       method,
       headers,

@@ -24,6 +24,15 @@ export interface Session {
   csrfToken?: string;
 }
 
+export interface AuthConfig {
+  googleEnabled: boolean;
+}
+
+export interface AuthMethods {
+  providers: Array<'PASSWORD' | 'GOOGLE'>;
+  hasPassword: boolean;
+}
+
 /** Membresía estable adaptada desde lista o detalle de grupo. */
 export interface GroupMember {
   id: string;

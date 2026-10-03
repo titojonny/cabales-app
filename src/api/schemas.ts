@@ -44,6 +44,13 @@ export const sessionSchema = z
   })
   .transform((session) => session);
 
+export const authConfigSchema = z.strictObject({ googleEnabled: z.boolean() });
+export const authMethodsSchema = z.strictObject({
+  providers: z.array(z.enum(['PASSWORD', 'GOOGLE'])).max(4),
+  hasPassword: z.boolean(),
+});
+export const googleLinkStartSchema = z.strictObject({ authorizationUrl: z.string().url() });
+
 /** Valida y adapta la forma observada de cada elemento de `GET /groups`. */
 export const groupListSchema = z
   .array(

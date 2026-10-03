@@ -369,6 +369,9 @@ small {
   width: 100%;
   min-width: 0;
 }
+.google-auth-button {
+  margin-bottom: 1rem;
+}
 label,
 legend {
   font-size: 0.84rem;
@@ -1964,6 +1967,17 @@ legend {
 .shortcut:hover,
 .shortcut:focus-visible {
   border-color: rgba(98, 230, 201, 0.42);
+}
+.account-method-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.account-method-row small {
+  display: block;
+  color: var(--color-muted);
 }
 .account-grid .button-row,
 .page > .button-row {

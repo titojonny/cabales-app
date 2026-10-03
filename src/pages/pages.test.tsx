@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import responses from '../test/fixtures/api-responses.json';
 import { apiResponse, renderPage, routeFetch } from '../test/render';
-import { ForgotPasswordPage } from './AuthPages';
+import { ForgotPasswordPage, GoogleButton } from './AuthPages';
 import { CabudasPage } from './CabudasPage';
 import { AcceptInvitationPage, extractInvitationToken } from './InvitationPage';
 import { OcrProviderNotice } from './DocsPage';
@@ -18,6 +18,28 @@ describe('tokens de invitacion', () => {
 afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', '/');
+});
+
+describe('acceso Google', () => {
+  it('oculta el boton cuando la configuracion publica lo deshabilita', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/auth/config': () => apiResponse({ googleEnabled: false }),
+    });
+    renderPage(<GoogleButton />);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/auth/config',
+        expect.objectContaining({ credentials: 'include' }),
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Continuar con Google' })).toBeNull();
+  });
+
+  it('muestra Continuar con Google cuando la API lo habilita', async () => {
+    routeFetch({ '/api/v1/auth/config': () => apiResponse({ googleEnabled: true }) });
+    renderPage(<GoogleButton />);
+    expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+  });
 });
 
 describe('recuperación de contraseña', () => {
