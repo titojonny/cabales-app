@@ -122,20 +122,80 @@
     "name": "Evento",
     "description": null,
     "startsAt": "2026-09-26T18:28:51.263Z",
+    "endsAt": null,
+    "locationName": null,
+    "locationAddress": null,
+    "mapsUrl": null,
+    "timeZone": null,
     "status": "OPEN",
+    "createdById": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
     "createdAt": "2026-09-26T18:28:51.270Z",
     "participants": [
       {
         "id": "11f6c76f-0074-406f-809f-57d7323ecd83",
         "groupMemberId": "6cb2496e-e5d0-4c38-a109-817ae0254512",
-        "guestName": null
+        "guestName": null,
+        "rsvpStatus": "PENDING",
+        "respondedAt": null
       },
       {
         "id": "90cf4c77-7c14-43e8-a9ba-625cf3653705",
         "groupMemberId": "9263760c-d7be-4536-a739-799004773cbb",
-        "guestName": null
+        "guestName": null,
+        "rsvpStatus": "PENDING",
+        "respondedAt": null
       }
     ]
+  },
+  "eventDetail": {
+    "id": "ac74e322-b190-44c6-9328-c56e9dbf7956",
+    "groupId": "dfd0b575-87c4-4365-adce-b9ac092ef497",
+    "name": "Evento",
+    "description": null,
+    "startsAt": "2026-09-26T18:28:51.263Z",
+    "endsAt": null,
+    "locationName": null,
+    "locationAddress": null,
+    "mapsUrl": null,
+    "timeZone": null,
+    "status": "OPEN",
+    "createdById": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+    "createdAt": "2026-09-26T18:28:51.270Z",
+    "participants": [
+      {
+        "id": "11f6c76f-0074-406f-809f-57d7323ecd83",
+        "guestName": null,
+        "rsvpStatus": "PENDING",
+        "respondedAt": null,
+        "groupMember": {
+          "id": "6cb2496e-e5d0-4c38-a109-817ae0254512",
+          "user": {
+            "id": "e4fb5feb-0baf-4bfe-9bda-90b23c5735bf",
+            "displayName": "Ana",
+            "avatarUrl": null
+          }
+        }
+      },
+      {
+        "id": "90cf4c77-7c14-43e8-a9ba-625cf3653705",
+        "guestName": null,
+        "rsvpStatus": "PENDING",
+        "respondedAt": null,
+        "groupMember": {
+          "id": "9263760c-d7be-4536-a739-799004773cbb",
+          "user": {
+            "id": "32f78c10-89cf-4113-b7a5-978cbba66b4d",
+            "displayName": "Bob",
+            "avatarUrl": null
+          }
+        }
+      }
+    ],
+    "links": [],
+    "reminders": [],
+    "rsvpCounts": { "PENDING": 2, "GOING": 0, "MAYBE": 0, "DECLINED": 0 },
+    "settlement": null,
+    "_count": { "expenses": 0 }
   },
   "budget": {
     "id": "fbda55a0-5021-4ce9-bf6d-fd993dec0a13",
@@ -548,6 +608,8 @@
     "myRole": "MANAGER",
     "canManage": true,
     "canContribute": true,
+    "canWithdraw": true,
+    "canClose": true,
     "totals": {
       "CONTRIBUTION": {
         "totalCents": 500,

@@ -5,9 +5,12 @@ import type {
   CreateGroupInput,
   CreatedInvitation,
   Event,
+  UpdateEventInput,
   Expense,
   ExpenseSummary,
   Group,
+  AuthConfig,
+  AuthMethods,
   LoginInput,
   PaidTransfer,
   RegisterInput,
@@ -16,6 +19,7 @@ import type {
   SettlementSummary,
 } from './contracts';
 import { request } from './http';
+import { toQuery } from './modules-api';
 import {
   acceptedInvitationSchema,
   createdInvitationSchema,
@@ -29,8 +33,20 @@ import {
   groupListSchema,
   paidTransferSchema,
   sessionSchema,
+  authConfigSchema,
+  authMethodsSchema,
+  googleLinkStartSchema,
   settlementDetailSchema,
   settlementListSchema,
+  calendarEventListSchema,
+  eventCommentListSchema,
+  eventCommentSchema,
+  eventFundsSchema,
+  publicShareLinkListSchema,
+  publicShareLinkSchema,
+  publicSummarySchema,
+  repeatEventTemplateSchema,
+  repeatExpenseTemplateSchema,
 } from './schemas';
 
 function withCurrentMembership(group: Group, userId: string): Group {
@@ -45,6 +61,14 @@ function withCurrentMembership(group: Group, userId: string): Group {
 /** Adaptador único del contrato implementado por Cabales API `/api/v1`. */
 export const cabalesApi = {
   me: () => request<Session>('/auth/me', { schema: sessionSchema }),
+  authConfig: () => request<AuthConfig>('/auth/config', { schema: authConfigSchema }),
+  authMethods: () => request<AuthMethods>('/auth/methods', { schema: authMethodsSchema }),
+  startGoogleLink: () =>
+    request<{ authorizationUrl: string }>('/auth/google/link/start', {
+      method: 'POST',
+      schema: googleLinkStartSchema,
+    }),
+  unlinkGoogle: () => request<{ unlinked: true }>('/auth/google', { method: 'DELETE' }),
   login: (input: LoginInput) =>
     request<Session>('/auth/login', { method: 'POST', body: input, schema: sessionSchema }),
   register: (input: RegisterInput) =>
@@ -89,6 +113,65 @@ export const cabalesApi = {
       body: input,
       schema: createdEventSchema,
     }),
+  updateEvent: (groupId: string, eventId: string, input: UpdateEventInput) =>
+    request<Event>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'PATCH',
+      body: input,
+      schema: eventDetailSchema,
+    }),
+  cancelEvent: (groupId: string, eventId: string) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/cancel`,
+      { method: 'POST', schema: eventDetailSchema },
+    ),
+  deleteEvent: (groupId: string, eventId: string) =>
+    request<void>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE',
+    }),
+  rsvpEvent: (
+    groupId: string,
+    eventId: string,
+    status: 'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED',
+  ) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/rsvp`,
+      { method: 'PUT', body: { status }, schema: eventDetailSchema },
+    ),
+  updateEventReminders: (
+    groupId: string,
+    eventId: string,
+    reminders: Array<{ minutesBefore: number; enabled: boolean }>,
+  ) =>
+    request<Event>(
+      `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/reminders`,
+      { method: 'PUT', body: { reminders }, schema: eventDetailSchema },
+    ),
+  repeatEventTemplate: (groupId: string, eventId: string) =>
+    request<Record<string, unknown>>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/repeat-template`, {
+      schema: repeatEventTemplateSchema,
+    }),
+  eventComments: (groupId: string, eventId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments`, {
+      schema: eventCommentListSchema,
+    }),
+  createEventComment: (groupId: string, eventId: string, body: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments`, {
+      method: 'POST',
+      body: { body },
+      schema: eventCommentSchema,
+    }),
+  updateEventComment: (groupId: string, eventId: string, commentId: string, body: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments/${encodeURIComponent(commentId)}`, {
+      method: 'PATCH',
+      body: { body },
+      schema: eventCommentSchema,
+    }),
+  deleteEventComment: (groupId: string, eventId: string, commentId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' }),
+  eventFunds: (groupId: string, eventId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/funds`, { schema: eventFundsSchema }),
+  replaceEventFunds: (groupId: string, eventId: string, fundIds: string[]) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/funds`, { method: 'PUT', body: { fundIds }, schema: eventFundsSchema }),
   createExpense: (groupId: string, input: CreateExpenseInput, idempotencyKey: string) =>
     request<Expense>(`/groups/${encodeURIComponent(groupId)}/expenses`, {
       method: 'POST',
@@ -96,8 +179,8 @@ export const cabalesApi = {
       idempotencyKey,
       schema: expenseDetailSchema,
     }),
-  expenses: (groupId: string) =>
-    request<ExpenseSummary[]>(`/groups/${encodeURIComponent(groupId)}/expenses`, {
+  expenses: (groupId: string, filters: { from?: string; to?: string; categoryId?: string; tagId?: string; text?: string } = {}) =>
+    request<ExpenseSummary[]>(`/groups/${encodeURIComponent(groupId)}/expenses${toQuery(filters)}`, {
       schema: expenseListSchema,
     }),
   expense: (groupId: string, expenseId: string) =>
@@ -105,6 +188,8 @@ export const cabalesApi = {
       `/groups/${encodeURIComponent(groupId)}/expenses/${encodeURIComponent(expenseId)}`,
       { schema: expenseDetailSchema },
     ),
+  repeatExpenseTemplate: (groupId: string, expenseId: string) =>
+    request<Record<string, unknown>>(`/groups/${encodeURIComponent(groupId)}/expenses/${encodeURIComponent(expenseId)}/repeat-template`, { schema: repeatExpenseTemplateSchema }),
   settlements: (groupId: string) =>
     request<SettlementSummary[]>(`/groups/${encodeURIComponent(groupId)}/settlements`, {
       schema: settlementListSchema,
@@ -126,4 +211,12 @@ export const cabalesApi = {
       `/groups/${encodeURIComponent(groupId)}/settlements/${encodeURIComponent(settlementId)}/transfers/${encodeURIComponent(transferId)}/paid`,
       { method: 'PATCH', schema: paidTransferSchema },
     ),
+  createPublicShareLink: (groupId: string, input: { eventId?: string; settlementId?: string; expiresInDays: number }) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links`, { method: 'POST', body: input, schema: publicShareLinkSchema }),
+  publicShareLinks: (groupId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links`, { schema: publicShareLinkListSchema }),
+  revokePublicShareLink: (groupId: string, linkId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links/${encodeURIComponent(linkId)}/revoke`, { method: 'POST' }),
+  publicSummary: (token: string) => request(`/share/summaries/${encodeURIComponent(token)}`, { schema: publicSummarySchema }),
+  calendarEvents: (from: string, to: string) => request('/calendar/events' + toQuery({ from, to }), { schema: calendarEventListSchema }),
 };

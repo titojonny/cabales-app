@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { moduleKeys, moduleQueries } from '../api/module-queries';
-import type { FundMovementType } from '../api/module-schemas';
+import type { FundDetail, FundMovementType } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
 import { queries } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
@@ -119,6 +119,100 @@ function CreateFundForm({ groupId, onDone }: { groupId: string; onDone: () => vo
   );
 }
 
+function CreateContributionRequestForm({
+  groupId,
+  fundId,
+  data,
+  onDone,
+}: {
+  groupId: string;
+  fundId: string;
+  data: FundDetail;
+  onDone: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [dueAt, setDueAt] = useState(() => localDateTimeInput(24 * 60 * 60 * 1000));
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string>();
+  const create = useMutation({
+    mutationFn: () =>
+      modulesApi.createFundContributionRequest(groupId, fundId, {
+        dueAt: new Date(dueAt).toISOString(),
+        members: data.members.map((member) => ({
+          fundMemberId: member.id,
+          amountCents: parseMoneyToCents(amounts[member.id] ?? '') ?? 0,
+        })),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: moduleKeys.fund(groupId, fundId) });
+      onDone();
+    },
+  });
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const members = data.members.map((member) => ({
+      fundMemberId: member.id,
+      amountCents: parseMoneyToCents(amounts[member.id] ?? ''),
+    }));
+    if (!dueAt || Number.isNaN(new Date(dueAt).getTime()))
+      return setError('Indica una fecha limite.');
+    if (members.some((member) => member.amountCents === null || member.amountCents <= 0))
+      return setError('Indica un importe positivo para cada integrante.');
+    setError(undefined);
+    create.mutate();
+  };
+  return (
+    <section className="form-card glass-panel">
+      <h2>Nueva solicitud de aporte</h2>
+      <p className="muted small">
+        El importe se guarda por integrante y cada persona ve su estado.
+      </p>
+      <form onSubmit={submit} noValidate>
+        <label htmlFor="contribution-due-at">Fecha limite</label>
+        <input
+          id="contribution-due-at"
+          type="datetime-local"
+          value={dueAt}
+          onChange={(event) => setDueAt(event.target.value)}
+        />
+        <fieldset>
+          <legend>Importe por integrante ({data.currency})</legend>
+          {data.members.map((member) => (
+            <label key={member.id} className="field-pair even">
+              <span>{member.user.displayName}</span>
+              <input
+                aria-label={`Importe para ${member.user.displayName}`}
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amounts[member.id] ?? ''}
+                onChange={(event) =>
+                  setAmounts((current) => ({ ...current, [member.id]: event.target.value }))
+                }
+              />
+            </label>
+          ))}
+        </fieldset>
+        <FieldError id="contribution-request-error" message={error} />
+        {create.isError && <ErrorMessage error={create.error} />}
+        <div className="button-row">
+          <Button variant="primary" type="submit" isDisabled={create.isPending}>
+            Crear solicitud
+          </Button>
+          <Button variant="tertiary" type="button" onPress={onDone}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function localDateTimeInput(offsetMs: number): string {
+  const value = new Date(Date.now() + offsetMs);
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+}
+
 /** Fondos comunes del grupo; el saldo siempre se deriva de movimientos. */
 export function FundsPage() {
   const { groupId = '' } = useParams();
@@ -185,11 +279,13 @@ type MovementDraft = {
   amount: string;
   sign: '+' | '-';
   description: string;
+  contributionRequestMemberId?: string;
 };
 
 /** Detalle del fondo: saldo, integrantes, movimientos inmutables y registro de nuevos. */
 export function FundDetailPage() {
   const { groupId = '', fundId = '' } = useParams();
+  const { session } = useAuth();
   const queryClient = useQueryClient();
   const fund = useQuery(moduleQueries.fund(groupId, fundId));
   const movements = useInfiniteQuery({
@@ -205,6 +301,7 @@ export function FundDetailPage() {
     description: '',
   });
   const [error, setError] = useState<string>();
+  const [creatingRequest, setCreatingRequest] = useState(false);
   const attempt = useRef<{ key: string; signature: string } | undefined>(undefined);
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: moduleKeys.fund(groupId, fundId) });
@@ -239,7 +336,8 @@ export function FundDetailPage() {
   const data = fund.data;
   const allowedTypes: FundMovementType[] = [
     ...(data.canContribute ? (['CONTRIBUTION'] as const) : []),
-    ...(data.canManage ? (['WITHDRAWAL', 'ADJUSTMENT'] as const) : []),
+    ...(data.canWithdraw ? (['WITHDRAWAL'] as const) : []),
+    ...(data.canManage ? (['ADJUSTMENT'] as const) : []),
   ];
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -250,7 +348,14 @@ export function FundDetailPage() {
       return setError('Describe el motivo con al menos 3 caracteres.');
     setError(undefined);
     const amountCents = draft.type === 'ADJUSTMENT' && draft.sign === '-' ? -cents : cents;
-    const body = { type: draft.type, amountCents, ...(description ? { description } : {}) };
+    const body = {
+      type: draft.type,
+      amountCents,
+      ...(description ? { description } : {}),
+      ...(draft.type === 'CONTRIBUTION' && draft.contributionRequestMemberId
+        ? { contributionRequestMemberId: draft.contributionRequestMemberId }
+        : {}),
+    };
     // Misma llave si se reintenta el mismo movimiento; nueva llave si cambió.
     const signature = JSON.stringify(body);
     if (attempt.current?.signature !== signature)
@@ -305,6 +410,55 @@ export function FundDetailPage() {
         </article>
       </div>
 
+      {data.canManage && !data.archivedAt && (
+        <>
+          <FundRulesForm groupId={groupId} fundId={fundId} data={data} onSaved={refresh} />
+          {!creatingRequest && (
+            <Button variant="tertiary" type="button" onPress={() => setCreatingRequest(true)}>
+              Solicitar aportes
+            </Button>
+          )}
+          {creatingRequest && (
+            <CreateContributionRequestForm
+              groupId={groupId}
+              fundId={fundId}
+              data={data}
+              onDone={() => setCreatingRequest(false)}
+            />
+          )}
+        </>
+      )}
+
+      <section className="list-section" aria-labelledby="contribution-requests-title">
+        <h2 id="contribution-requests-title" className="section-title">
+          Solicitudes de aporte
+        </h2>
+        {data.contributionRequests.length === 0 && (
+          <p className="muted">No hay solicitudes de aporte.</p>
+        )}
+        {data.contributionRequests.length > 0 && (
+          <ul className="movement-list">
+            {data.contributionRequests.map((request) => (
+              <li key={request.id} className="glass-panel">
+                <span className={`status-chip ${request.status.toLowerCase()}`}>
+                  {request.status === 'PAID'
+                    ? 'Pagado'
+                    : request.status === 'OVERDUE'
+                      ? 'Vencido'
+                      : 'Pendiente'}
+                </span>
+                <span className="grow">
+                  <strong>
+                    {request.user.displayName} · {formatMoney(request.amountCents, data.currency)}
+                  </strong>
+                  <small>Limite: {formatDate(request.dueAt, true)}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {!data.archivedAt && allowedTypes.length > 0 && (
         <section className="form-card glass-panel">
           <h2>Registrar movimiento</h2>
@@ -328,6 +482,31 @@ export function FundDetailPage() {
                     </option>
                   ))}
                 </select>
+                {draft.type === 'CONTRIBUTION' && (
+                  <select
+                    aria-label="Solicitud de aporte"
+                    value={draft.contributionRequestMemberId ?? ''}
+                    onChange={(event) =>
+                      setDraft((previous) => ({
+                        ...previous,
+                        contributionRequestMemberId: event.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Aporte libre</option>
+                    {data.contributionRequests
+                      .filter(
+                        (request) =>
+                          request.user.id === session?.user.id && request.status !== 'PAID',
+                      )
+                      .map((request) => (
+                        <option key={request.id} value={request.id}>
+                          {request.status === 'OVERDUE' ? 'Vencido' : 'Pendiente'} ·{' '}
+                          {formatMoney(request.amountCents, data.currency)}
+                        </option>
+                      ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label htmlFor="movement-amount">Monto ({data.currency})</label>
@@ -432,7 +611,7 @@ export function FundDetailPage() {
         )}
       </section>
 
-      {data.canManage && !data.archivedAt && (
+      {data.canClose && !data.archivedAt && (
         <section className="danger-zone">
           <h2>Archivar fondo</h2>
           <p className="muted">Solo es posible con saldo cero. El historial se conserva.</p>
@@ -451,4 +630,13 @@ export function FundDetailPage() {
       )}
     </PageHeader>
   );
+}
+
+function FundRulesForm({ groupId, fundId, data, onSaved }: { groupId: string; fundId: string; data: FundDetail; onSaved: () => void }) {
+  const [contributionPolicy, setContributionPolicy] = useState(data.contributionPolicy);
+  const [withdrawalPolicy, setWithdrawalPolicy] = useState(data.withdrawalPolicy);
+  const [closingPolicy, setClosingPolicy] = useState(data.closingPolicy);
+  const [limit, setLimit] = useState(data.withdrawalLimitCents == null ? '' : String(data.withdrawalLimitCents / 100));
+  const update = useMutation({ mutationFn: () => modulesApi.updateFund(groupId, fundId, { contributionPolicy, withdrawalPolicy, closingPolicy, withdrawalLimitCents: limit.trim() ? Math.round(Number(limit) * 100) : null }), onSuccess: onSaved });
+  return <section className="form-card glass-panel" aria-labelledby="fund-rules-title"><h2 id="fund-rules-title">Reglas del fondo</h2><p className="muted">Se aplican en el servidor a cada aporte, retiro y cierre.</p><div className="field-pair"><div><label htmlFor="fund-contribution-policy">Quién puede aportar</label><select id="fund-contribution-policy" value={contributionPolicy} onChange={(event) => setContributionPolicy(event.target.value as typeof contributionPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div><div><label htmlFor="fund-withdrawal-policy">Quién puede retirar</label><select id="fund-withdrawal-policy" value={withdrawalPolicy} onChange={(event) => setWithdrawalPolicy(event.target.value as typeof withdrawalPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div></div><div className="field-pair"><div><label htmlFor="fund-closing-policy">Quién puede cerrar</label><select id="fund-closing-policy" value={closingPolicy} onChange={(event) => setClosingPolicy(event.target.value as typeof closingPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div><div><label htmlFor="fund-withdrawal-limit">Límite de retiro ({data.currency})</label><input id="fund-withdrawal-limit" inputMode="decimal" placeholder="Sin límite" value={limit} onChange={(event) => setLimit(event.target.value)} /></div></div>{update.isError && <ErrorMessage error={update.error} />}<Button variant="primary" type="button" isDisabled={update.isPending} onPress={() => update.mutate()}>{update.isPending ? 'Guardando…' : 'Guardar reglas'}</Button></section>;
 }

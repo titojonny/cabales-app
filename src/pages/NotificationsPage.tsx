@@ -29,7 +29,14 @@ const typeLabel: Record<NotificationType, string> = {
   'fund.movement': 'Movimientos de fondos',
   'ocr.finished': 'Lectura de comprobantes',
   'privacy.updated': 'Solicitudes de privacidad',
+  'document.expiring': 'Documentos por vencer',
+  'document.expired': 'Documentos vencidos',
   'achievement.unlocked': 'Logros',
+  'event.reminder': 'Recordatorios de eventos',
+  'event.comment': 'Comentarios de eventos',
+  'recurring.expense': 'Gastos recurrentes',
+  'fund.contribution_due': 'Aportes próximos a vencer',
+  'fund.contribution_overdue': 'Aportes vencidos',
 };
 
 /** Destino interno de un aviso; solo rutas propias, nunca URLs recibidas. */
@@ -52,6 +59,15 @@ function notificationLink(notification: Notification): string | undefined {
   if (notification.type === 'ocr.finished') return '/app/docs';
   if (notification.type === 'privacy.updated') return '/app/mas#privacidad';
   if (notification.type === 'achievement.unlocked') return '/app/achievements';
+  if ((notification.type === 'event.reminder' || notification.type === 'event.comment') && groupId && value('eventId'))
+    return `/app/groups/${groupId}/events/${value('eventId')}`;
+  if (
+    (notification.type === 'fund.contribution_due' ||
+      notification.type === 'fund.contribution_overdue') &&
+    groupId &&
+    value('fundId')
+  )
+    return `/app/groups/${groupId}/funds/${value('fundId')}`;
   return undefined;
 }
 

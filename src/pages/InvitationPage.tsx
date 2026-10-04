@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@heroui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import QRCode from 'qrcode';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
@@ -39,7 +40,15 @@ function invitationLink(token: string): string {
 /** Enlace de un solo uso para compartir cuando no hay correo o como respaldo. */
 function InvitationLinkResult({ result }: { result: CreatedInvitation }) {
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const url = invitationLink(result.token);
+  useEffect(() => {
+    let active = true;
+    void QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 2, width: 280 })
+      .then((dataUrl) => { if (active) setQrDataUrl(dataUrl); })
+      .catch(() => { if (active) setQrDataUrl(''); });
+    return () => { active = false; };
+  }, [url]);
   return (
     <div className="invitation-result" role="status">
       <strong>
@@ -66,7 +75,9 @@ function InvitationLinkResult({ result }: { result: CreatedInvitation }) {
         >
           {copied ? 'Enlace copiado' : 'Copiar enlace'}
         </Button>
+        {qrDataUrl && <a className="button quiet" href={qrDataUrl} download="cabales-invitacion-qr.png">Descargar QR</a>}
       </div>
+      {qrDataUrl && <figure className="invitation-qr"><img src={qrDataUrl} alt="Código QR del enlace de invitación" /><figcaption>Escanea para abrir la invitación</figcaption></figure>}
       <small>Expira: {formatDate(result.invitation.expiresAt, true)}</small>
     </div>
   );

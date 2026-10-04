@@ -4,6 +4,11 @@ import type { ZodType } from 'zod';
 
 const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim();
 const API_BASE_URL = (configuredBaseUrl || '/api/v1').replace(/\/$/, '');
+
+/** Construye URLs de navegación manteniendo el origen configurable de la API. */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
 const configuredCsrfCookieName = import.meta.env.VITE_CSRF_COOKIE_NAME?.trim();
 const CSRF_COOKIE_NAME =
   configuredCsrfCookieName && /^[A-Za-z0-9_-]{1,128}$/.test(configuredCsrfCookieName)
@@ -65,6 +70,7 @@ export interface RequestOptions<T> extends Omit<RequestInit, 'body'> {
 export interface ResponseMeta {
   nextCursor?: string | null;
   idempotencyReplayed?: boolean;
+  total?: number;
 }
 
 export interface FileResponse {
@@ -74,7 +80,8 @@ export interface FileResponse {
 
 /** Operación de telemetría sin query string: evita registrar nombres de archivo o filtros. */
 function operationName(path: string): string {
-  return path.split('?')[0] ?? path;
+  const operation = path.split('?')[0] ?? path;
+  return operation.replace(/\/share\/(?:summaries|documents)\/[A-Za-z0-9_-]+$/, (value) => `${value.split('/').slice(0, -1).join('/')}/:token`);
 }
 
 function isEnvelope(value: unknown): value is ApiEnvelope<unknown> {
@@ -106,14 +113,14 @@ export async function requestFile(
   const method = (options.method || 'GET').toUpperCase();
   const requestId = crypto.randomUUID();
   const headers = new Headers(options.headers);
-  headers.set('Accept', 'text/csv, application/octet-stream');
+  headers.set('Accept', 'text/csv, application/pdf, application/octet-stream');
   headers.set('X-Request-ID', requestId);
   if (mutationMethods.has(method) && !csrfToken) csrfToken = readCsrfCookie();
   if (mutationMethods.has(method) && csrfToken) headers.set('X-CSRF-Token', csrfToken);
   const init = options;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       ...init,
       method,
       headers,
@@ -123,7 +130,9 @@ export async function requestFile(
   } catch {
     recordTelemetry({ event: 'api_failure', operation, requestId });
     throw new HttpError(
-      navigator.onLine ? 'No pudimos descargar el archivo. Intenta de nuevo.' : 'No hay conexión. El archivo no se descargó.',
+      navigator.onLine
+        ? 'No pudimos descargar el archivo. Intenta de nuevo.'
+        : 'No hay conexión. El archivo no se descargó.',
       0,
       'NETWORK_ERROR',
     );
@@ -151,6 +160,13 @@ export async function requestWithMeta<T>(
 ): Promise<{ data: T; meta: ResponseMeta }> {
   const operation = operationName(path);
   const method = (options.method || 'GET').toUpperCase();
+  if (mutationMethods.has(method) && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new HttpError(
+      'Sin conexión. Esta acción está deshabilitada y no se encolan pagos ni cambios.',
+      0,
+      'OFFLINE_MUTATION',
+    );
+  }
   const requestId = crypto.randomUUID();
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
@@ -165,7 +181,7 @@ export async function requestWithMeta<T>(
   const { body, rawBody, schema, ...init } = options;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       ...init,
       method,
       headers,

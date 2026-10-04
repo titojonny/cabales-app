@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@heroui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
+import { moduleQueries } from '../api/module-queries';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { eventSchema, groupSchema, type EventValues, type GroupValues } from '../domain/validation';
@@ -14,6 +15,12 @@ import { CategoryManager } from './BudgetPages';
 import { GroupInvitationForm, InvitationList } from './InvitationPage';
 
 const roleLabels = { OWNER: 'Propietario', ADMIN: 'Administrador', MEMBER: 'Miembro' } as const;
+
+function localDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
 
 /** Lista grupos reales y representa por separado carga, error y ausencia de datos. */
 export function DashboardPage() {
@@ -153,6 +160,14 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
   const { session } = useAuth();
   const group = useQuery(queries.group(groupId, session?.user.id ?? ''));
   const events = useQuery({ ...queries.events(groupId), enabled: tab === 'events' });
+  const achievementMembers = useQuery({
+    ...moduleQueries.achievementMembers(groupId),
+    enabled: tab === 'summary',
+  });
+  const achievementRanking = useQuery({
+    ...moduleQueries.achievementRanking(groupId),
+    enabled: tab === 'summary',
+  });
   if (group.isPending)
     return (
       <StatusPanel title="Cargando grupo">
@@ -196,23 +211,74 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
               <h2>Personas</h2>
               {group.data.members?.length ? (
                 <ul>
-                  {group.data.members.map((member) => (
-                    <li key={member.id}>
-                      <span className="avatar" aria-hidden="true">
-                        {(member.user?.displayName || '?').slice(0, 1).toUpperCase()}
-                      </span>
-                      <span>
-                        <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
-                        <small>{roleLabels[member.role]}</small>
-                      </span>
-                    </li>
-                  ))}
+                  {group.data.members.map((member) => {
+                    const badges =
+                      achievementMembers.data?.find((row) => row.user.id === member.user?.id)
+                        ?.badges ?? [];
+                    return (
+                      <li key={member.id}>
+                        <span className="avatar" aria-hidden="true">
+                          {(member.user?.displayName || '?').slice(0, 1).toUpperCase()}
+                        </span>
+                        <span>
+                          <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
+                          <small>{roleLabels[member.role]}</small>
+                          {badges.length > 0 && (
+                            <span
+                              className="chip-list"
+                              aria-label={`Insignias de ${member.user?.displayName}`}
+                            >
+                              {badges.map((badge) => (
+                                <span className="status-chip success" key={badge.code}>
+                                  {badge.name} ·{' '}
+                                  {badge.level === 'GOLD'
+                                    ? 'Oro'
+                                    : badge.level === 'SILVER'
+                                      ? 'Plata'
+                                      : 'Bronce'}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="muted">La API no devolvió integrantes para este grupo.</p>
               )}
             </article>
           </div>
+          {achievementMembers.isError && <ErrorMessage error={achievementMembers.error} />}
+          {achievementRanking.isPending && <p className="muted" aria-busy="true">Calculando ranking…</p>}
+          {achievementRanking.isError && <ErrorMessage error={achievementRanking.error} />}
+          {achievementRanking.data && achievementRanking.data.length > 0 && (
+            <section className="members-card glass-panel" aria-labelledby="group-ranking-title">
+              <h2 id="group-ranking-title">Ranking del grupo</h2>
+              <p className="muted small">
+                Puntos por insignias; solo aparecen quienes decidieron participar.
+              </p>
+              <ol className="notification-list">
+                {achievementRanking.data.map((row) => (
+                  <li key={row.user.id}>
+                    <span className="avatar" aria-hidden="true">
+                      {row.rank}
+                    </span>
+                    <span className="grow">
+                      <strong>{row.user.displayName}</strong>
+                      <small>
+                        {row.points} puntos · {row.badges.length} insignias
+                      </small>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          {achievementRanking.data?.length === 0 && (
+            <p className="muted">Aún no hay insignias visibles en el ranking.</p>
+          )}
           {['OWNER', 'ADMIN'].includes(group.data.currentRole ?? '') && (
             <div className="admin-grid">
               <GroupInvitationForm groupId={groupId} />
@@ -285,18 +351,27 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
 /** Crea un evento asociado al identificador validado por la ruta y refresca su lista. */
 export function CreateEventPage() {
   const { groupId = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const repeatFrom = searchParams.get('repeatFrom') ?? '';
   const { session } = useAuth();
   const group = useQuery(queries.group(groupId, session?.user.id ?? ''));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [guestDraft, setGuestDraft] = useState('');
   const [linkDraft, setLinkDraft] = useState({ label: '', url: '' });
+  const repeatTemplate = useQuery({ queryKey: ['repeat-event-template', groupId, repeatFrom], queryFn: () => cabalesApi.repeatEventTemplate(groupId, repeatFrom), enabled: Boolean(repeatFrom), retry: false });
+  const repeatPrefilled = useRef(false);
   const form = useForm<EventValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       name: '',
       description: '',
       startsAt: '',
+      endsAt: '',
+      locationName: '',
+      locationAddress: '',
+      mapsUrl: '',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       memberIds: [],
       guests: [],
       links: [],
@@ -305,12 +380,23 @@ export function CreateEventPage() {
   const memberIds = form.watch('memberIds');
   const guests = form.watch('guests');
   const links = form.watch('links');
+  useEffect(() => {
+    if (!repeatTemplate.data || repeatPrefilled.current) return;
+    repeatPrefilled.current = true;
+    const template = repeatTemplate.data as { name: string; description?: string; startsAt: string; endsAt?: string; locationName?: string; locationAddress?: string; mapsUrl?: string; timeZone?: string; memberIds: string[]; guests: string[]; links: Array<{ label: string; url: string }> };
+    form.reset({ name: template.name, description: template.description ?? '', startsAt: localDateTime(template.startsAt), endsAt: template.endsAt ? localDateTime(template.endsAt) : '', locationName: template.locationName ?? '', locationAddress: template.locationAddress ?? '', mapsUrl: template.mapsUrl ?? '', timeZone: template.timeZone ?? '', memberIds: template.memberIds, guests: template.guests, links: template.links });
+  }, [form, repeatTemplate.data]);
   const mutation = useMutation({
     mutationFn: (values: EventValues) =>
       cabalesApi.createEvent(groupId, {
         name: values.name,
         ...(values.description ? { description: values.description } : {}),
         startsAt: new Date(values.startsAt).toISOString(),
+        ...(values.endsAt ? { endsAt: new Date(values.endsAt).toISOString() } : {}),
+        ...(values.locationName ? { locationName: values.locationName } : {}),
+        ...(values.locationAddress ? { locationAddress: values.locationAddress } : {}),
+        ...(values.mapsUrl ? { mapsUrl: values.mapsUrl } : {}),
+        ...(values.timeZone ? { timeZone: values.timeZone } : {}),
         memberIds: values.memberIds,
         guests: values.guests,
         links: values.links,
@@ -361,10 +447,30 @@ export function CreateEventPage() {
             {...form.register('startsAt')}
           />
           <FieldError id="starts-at-error" message={form.formState.errors.startsAt?.message} />
+          <label htmlFor="ends-at">
+            Fecha y hora de fin <span className="optional">Opcional</span>
+          </label>
+          <input id="ends-at" type="datetime-local" {...form.register('endsAt')} />
+          <FieldError id="ends-at-error" message={form.formState.errors.endsAt?.message} />
           <label htmlFor="event-description">
             Descripción <span className="optional">Opcional</span>
           </label>
           <textarea id="event-description" rows={3} {...form.register('description')} />
+          <label htmlFor="event-location-name">
+            Lugar <span className="optional">Opcional</span>
+          </label>
+          <input id="event-location-name" {...form.register('locationName')} />
+          <label htmlFor="event-location-address">Dirección</label>
+          <input id="event-location-address" {...form.register('locationAddress')} />
+          <label htmlFor="event-maps-url">Enlace de Maps</label>
+          <input
+            id="event-maps-url"
+            type="url"
+            placeholder="https://maps.google.com/"
+            {...form.register('mapsUrl')}
+          />
+          <label htmlFor="event-time-zone">Zona horaria</label>
+          <input id="event-time-zone" {...form.register('timeZone')} />
           <fieldset>
             <legend>Integrantes del grupo</legend>
             <p className="muted">Tu membresía se añade automáticamente como creadora.</p>

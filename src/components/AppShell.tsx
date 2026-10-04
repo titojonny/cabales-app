@@ -18,6 +18,8 @@ type NavItem = {
 const primaryNavigation: NavItem[] = [
   { to: '/app', label: 'Inicio', icon: 'home', end: true },
   { to: '/app/groups', label: 'Grupos', icon: 'groups' },
+  { to: '/app/calendar', label: 'Calendario', icon: 'calendar' },
+  { to: '/app/expenses', label: 'Mis gastos', icon: 'receipt' },
   { to: '/app/cabudas', label: 'Cabudas', icon: 'receipt' },
   { to: '/app/notifications', label: 'Avisos', icon: 'bell', badge: true },
   { to: '/app/mas', label: 'Más', icon: 'more' },
@@ -27,6 +29,8 @@ const primaryNavigation: NavItem[] = [
 const railNavigation: NavItem[] = [
   { to: '/app', label: 'Inicio', icon: 'home', end: true },
   { to: '/app/groups', label: 'Grupos', icon: 'groups' },
+  { to: '/app/calendar', label: 'Calendario', icon: 'calendar' },
+  { to: '/app/expenses', label: 'Mis gastos', icon: 'receipt' },
   { to: '/app/cabudas', label: 'Cabudas', icon: 'receipt' },
   { to: '/app/docs', label: 'Docs', icon: 'docs' },
   { to: '/app/statistics', label: 'Estadísticas', icon: 'chart' },

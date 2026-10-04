@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import responses from '../test/fixtures/api-responses.json';
 import { apiResponse, renderPage, routeFetch } from '../test/render';
-import { ForgotPasswordPage } from './AuthPages';
+import { ForgotPasswordPage, GoogleButton } from './AuthPages';
 import { CabudasPage } from './CabudasPage';
 import { AcceptInvitationPage, extractInvitationToken } from './InvitationPage';
 import { OcrProviderNotice } from './DocsPage';
@@ -17,7 +17,30 @@ describe('tokens de invitacion', () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
+});
+
+describe('acceso Google', () => {
+  it('oculta el boton cuando la configuracion publica lo deshabilita', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/auth/config': () => apiResponse({ googleEnabled: false }),
+    });
+    renderPage(<GoogleButton />);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/auth/config',
+        expect.objectContaining({ credentials: 'include' }),
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Continuar con Google' })).toBeNull();
+  });
+
+  it('muestra Continuar con Google cuando la API lo habilita', async () => {
+    routeFetch({ '/api/v1/auth/config': () => apiResponse({ googleEnabled: true }) });
+    renderPage(<GoogleButton />);
+    expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+  });
 });
 
 describe('recuperación de contraseña', () => {
@@ -136,6 +159,7 @@ describe('OCR y estadísticas', () => {
           trend: [],
           budgets: [],
         }),
+      '/api/v1/incomes': () => apiResponse([]),
       '/api/v1/statistics/summary/export': () =>
         new Response('section,label\r\ntotals,Total\r\n', {
           headers: {
@@ -154,5 +178,42 @@ describe('OCR y estadísticas', () => {
         expect.objectContaining({ credentials: 'include' }),
       ),
     );
+  });
+
+  it('exporta PDF del servidor y PNG desde canvas', async () => {
+    const fetchMock = routeFetch({
+      '/api/v1/groups': () => apiResponse([]),
+      '/api/v1/statistics/summary': () => apiResponse(responses.stats),
+      '/api/v1/incomes': () => apiResponse([]),
+      '/api/v1/statistics/summary/export/pdf': () =>
+        new Response(new Blob(['%PDF-1.4']), {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="cabales-statistics.pdf"',
+          },
+        }),
+    });
+    const context = {
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      fillStyle: '',
+      font: '',
+    } as unknown as CanvasRenderingContext2D;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
+      callback(new Blob(['png'], { type: 'image/png' }));
+    });
+    renderPage(<StatisticsPage />);
+    const pdfButton = await screen.findByRole('button', { name: 'Exportar PDF' });
+    await waitFor(() => expect(pdfButton).toBeEnabled());
+    fireEvent.click(pdfButton);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/statistics/summary/export/pdf'),
+        expect.objectContaining({ credentials: 'include' }),
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar PNG' }));
+    expect(await screen.findByText('PNG descargado.')).toBeInTheDocument();
   });
 });

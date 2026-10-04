@@ -1,6 +1,42 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+test.use({ serviceWorkers: 'block' });
+
+async function mockUnauthenticatedSession(page: Page) {
+  await page.route('**/api/v1/auth/me', async (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: false,
+        error: { code: 'SESSION_INVALID', message: 'Sesión inválida' },
+      }),
+    }),
+  );
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/config', async (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { googleEnabled: false } }),
+    }),
+  );
+  await page.route('**/api/v1/auth/me', async (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: false,
+        error: { code: 'SESSION_INVALID', message: 'Sesion invalida' },
+      }),
+    }),
+  );
+});
 
 test('la entrada pública presenta Cabales y permite ir al acceso', async ({ page }) => {
+  await mockUnauthenticatedSession(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /cuentas claras/i })).toBeVisible();
   await page
@@ -13,6 +49,7 @@ test('la entrada pública presenta Cabales y permite ir al acceso', async ({ pag
 test('el registro aplica la política real de contraseña antes de llamar a la API', async ({
   page,
 }) => {
+  await mockUnauthenticatedSession(page);
   await page.goto('/register');
   await page.getByLabel('Nombre').fill('Ana');
   await page.getByLabel('Correo').fill('ana@example.com');
@@ -24,13 +61,17 @@ test('el registro aplica la política real de contraseña antes de llamar a la A
 test('conserva el token de invitación al exigir inicio de sesión', async ({ page }) => {
   const token = 'opaque-invitation-token-123456789';
   // Cualquier otra llamada del shell (p. ej. contador de avisos) responde vacío.
-  await page.route('**/api/v1/**', async (route) =>
-    route.fulfill({
+  await page.route('**/api/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { unread: 0 } }),
-    }),
-  );
+      body: JSON.stringify({
+        success: true,
+        data: pathname.endsWith('/auth/config') ? { googleEnabled: false } : { unread: 0 },
+      }),
+    });
+  });
   await page.route('**/api/v1/groups/invitations/preview', async (route) =>
     route.fulfill({
       status: 200,

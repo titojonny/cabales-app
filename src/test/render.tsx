@@ -24,12 +24,25 @@ export function apiResponse(data: unknown, status = 200, meta?: unknown): Respon
   });
 }
 
-/** Stub de fetch que responde según el path (sin query) y registra las llamadas. */
+/** Respuesta de error con el sobre `{ success: false, error }` de la API. */
+export function apiError(
+  message: string,
+  status = 500,
+  code = 'INTERNAL_ERROR',
+  requestId = 'test-request',
+): Response {
+  return new Response(JSON.stringify({ success: false, error: { code, message, requestId } }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** Stub de fetch que empareja exactamente el pathname y registra las llamadas. */
 export function routeFetch(routes: Record<string, () => Response>) {
-  const mock = vi.fn(async (input: RequestInfo | URL) => {
-    const path = String(input)
-      .replace(/^https?:\/\/[^/]+/, '')
-      .split('?')[0]!;
+  const mock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+    void _init;
+    const url = input instanceof Request ? input.url : String(input);
+    const path = new URL(url, 'http://cabales.test').pathname;
     const handler = routes[path];
     if (!handler) throw new Error(`Ruta no simulada: ${path}`);
     return handler();

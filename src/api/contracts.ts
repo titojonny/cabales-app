@@ -24,6 +24,15 @@ export interface Session {
   csrfToken?: string;
 }
 
+export interface AuthConfig {
+  googleEnabled: boolean;
+}
+
+export interface AuthMethods {
+  providers: Array<'PASSWORD' | 'GOOGLE'>;
+  hasPassword: boolean;
+}
+
 /** Membresía estable adaptada desde lista o detalle de grupo. */
 export interface GroupMember {
   id: string;
@@ -62,19 +71,88 @@ export interface Event {
   name: string;
   description?: string;
   startsAt: string;
+  endsAt?: string;
+  locationName?: string;
+  locationAddress?: string;
+  mapsUrl?: string;
+  timeZone?: string;
   status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  createdById: string;
   createdAt: string;
   participantCount?: number;
   expenseCount?: number;
-  participants?: EventParticipant[];
+  participants?: Array<
+    EventParticipant & {
+      rsvpStatus: 'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED';
+      respondedAt?: string;
+    }
+  >;
   links?: Array<{ id: string; label: string; url: string }>;
+  reminders?: Array<{ id: string; minutesBefore: number; enabled: boolean }>;
+  rsvpCounts?: Record<'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED', number>;
   settlement?: { id: string; status: 'OPEN' | 'COMPLETED' | 'CANCELLED'; createdAt?: string };
+  funds?: EventFundSummary[];
+}
+
+export interface EventFundSummary {
+  fundId: string;
+  name: string;
+  currency: string;
+  balanceCents: number;
+  contributionsCents: number;
+  movementCount: number;
+}
+
+export interface EventComment {
+  id: string;
+  body: string;
+  authorUserId: string;
+  author: { id: string; displayName: string; avatarUrl: string | null };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicSummary {
+  type: 'EVENT' | 'SETTLEMENT';
+  expiresAt: string;
+  groupName: string;
+  eventName: string;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED' | 'COMPLETED';
+  currency: string;
+  totalCents: number;
+  participants: Array<{ displayName: string }>;
+  transfers: Array<{ debtor: string; creditor: string; amountCents: number; status: string }>;
+}
+
+export interface PublicShareLink {
+  id: string;
+  eventId: string | null;
+  settlementId: string | null;
+  expiresAt: string;
+  revokedAt?: string | null;
+  createdAt: string;
+  url?: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  groupId: string;
+  name: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  locationName: string | null;
+  group: { name: string; currency: string };
 }
 
 /** Parte persistida de un gasto y su referencia al padrón del evento. */
 export interface ExpenseParticipant {
   id: string;
   eventParticipantId: string;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   shareCents: number;
   eventParticipant: { guestName?: string; groupMemberId?: string };
 }
@@ -87,11 +165,15 @@ export interface Expense {
   title: string;
   notes?: string;
   totalCents: number;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
+  tags?: Array<{ id: string; name: string }>;
   participants: ExpenseParticipant[];
   payers: Array<{ id: string; eventParticipantId: string; amountCents: number }>;
   items: ExpenseItem[];
@@ -112,11 +194,15 @@ export interface ExpenseSummary {
   eventId: string;
   title: string;
   totalCents: number;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   createdAt: string;
   categoryId?: string;
+  tags?: Array<{ id: string; name: string }>;
   participantCount: number;
   itemCount: number;
 }
@@ -229,22 +315,51 @@ export interface CreateEventInput {
   name: string;
   description?: string;
   startsAt: string;
+  endsAt?: string;
+  locationName?: string | null;
+  locationAddress?: string | null;
+  mapsUrl?: string | null;
+  timeZone?: string | null;
   memberIds: string[];
   guests: string[];
   links: Array<{ label: string; url: string }>;
+  fundIds?: string[];
+}
+
+export interface UpdateEventInput {
+  name?: string;
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string | null;
+  locationName?: string | null;
+  locationAddress?: string | null;
+  mapsUrl?: string | null;
+  timeZone?: string | null;
+  links?: Array<{ label: string; url: string }>;
+  fundIds?: string[];
 }
 
 /** Carga real de gasto; la clave idempotente viaja fuera del body. */
 export interface CreateExpenseInput {
   eventId: string;
+  ocrJobId?: string;
   title: string;
   notes?: string;
   totalCents: number;
+  subtotalCents?: number;
+  taxCents?: number;
+  taxPercentBps?: number;
+  tipCents?: number;
+  tipPercentBps?: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'PERCENT';
   occurredAt: string;
   categoryId?: string;
-  participants: Array<{ eventParticipantId: string; shareCents?: number }>;
+  participants: Array<{
+    eventParticipantId: string;
+    shareCents?: number;
+    percentageBps?: number;
+  }>;
   payers: Array<{ eventParticipantId: string; amountCents: number }>;
   items?: Array<{
     name: string;
@@ -252,4 +367,5 @@ export interface CreateExpenseInput {
     quantity: number;
     allocations: Array<{ eventParticipantId: string; amountCents: number }>;
   }>;
+  tagIds?: string[];
 }

@@ -1,10 +1,33 @@
 # Cabales
 
+## P9: inicio de sesion con Google
+
+La PWA consulta `GET /api/v1/auth/config` y solo muestra **Continuar con Google** cuando la API responde `googleEnabled: true`; no conoce ni almacena credenciales OAuth. El inicio usa la redireccion del servidor y vuelve a la misma sesion por cookie HttpOnly y CSRF. Desde **Cuenta** se puede iniciar la vinculacion y solicitar la desvinculacion; la API mantiene al menos un metodo de acceso.
+
+Para habilitarlo configura en `cabales-api` un cliente OAuth web de Google Cloud y registra exactamente `http://localhost:3000/api/v1/auth/google/callback` (o el URI HTTPS de produccion) como URI de redireccion autorizado. Consulta el README de la API para el procedimiento completo.
+## P5: Docs
+
+La biblioteca de documentos permite filtrar por categoría (`IDENTIDAD`, `VIAJE`, `SEGURO`, `VEHICULO`, `SALUD`, `HOGAR`, `FINANZAS`, `OTRO`), fijar documentos, consultar recientes y configurar vencimiento. La descarga usa la API autenticada para que el servidor autorice y descifre el contenido; no se guarda una URL directa de S3.
+
+Los enlaces compartidos se gestionan desde cada documento: caducidad de hasta 30 días, límite opcional, copiar y revocar. La ruta pública solo muestra el nombre y el botón de descarga.
+
+Docs puede protegerse desde Cuenta con PIN de 6–12 dígitos o passkey/biometría cuando el navegador lo soporta. El desbloqueo es reciente y ligado a la sesión.
+
+## P3: agenda de eventos
+
+El detalle del evento permite editar fechas de inicio/fin, descripción, ubicación, Maps HTTPS, zona horaria y enlaces. También presenta botones RSVP accesibles (`PENDING`, `GOING`, `MAYBE`, `DECLINED`) con el estado propio y los recuentos, asistentes agrupados por estado, configuración de hasta cinco recordatorios y acciones de cancelar/eliminar con confirmación. La API mantiene la autorización; la app solo oculta controles cuando conoce el rol y muestra errores reales del servidor.
+
 PWA Mobile First para organizar grupos, registrar eventos, dividir gastos y cerrar liquidaciones. Este repositorio contiene el cliente web React (Tailwind CSS y TypeScript) y consume el contrato HTTP de Cabales API `/api/v1` (Express + PostgreSQL) sin importar código del servidor.
+
+Las pruebas de exportación esperan a que el resumen autenticado habilite los botones antes de simular la descarga; así no confunden la carga inicial de grupos, estadísticas e ingresos con una exportación no iniciada.
+
+## P2: reparto porcentual y desglose
+
+El divisor admite `EQUAL`, `EXACT` y `PERCENT`, con suma visible de porcentajes hasta `100.00 %`. El formulario permite impuesto y propina por importe o porcentaje, atajos de 10/15/20 % y desglose de subtotal, impuesto, propina y total por persona. Los importes porcentuales se convierten a puntos básicos y siguen el redondeo documentado por la API.
 
 ## Estado del MVP
 
-Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Cabudas, Docs, Estadísticas y Logros están integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
+Incluye acceso y registro, área privada, lista y creación de grupos, detalle con pestañas, lista y creación de eventos, divisor `EQUAL`/`EXACT`, detalle de gasto y gestión de liquidaciones. Docs está conectado a la API con filtros, vencimiento, enlaces temporales y bloqueo; Cabudas, Estadísticas y Logros siguen integrados a la navegación como marcadores claramente rotulados, sin datos simulados ni funciones falsas.
 
 No existe modo demo activo. Sin una API compatible, la aplicación compila y sirve la landing y los formularios públicos, mientras el área privada presenta un error controlado al no poder verificar la sesión.
 
@@ -79,6 +102,7 @@ La primera ejecución E2E requiere el navegador local: `pnpm exec playwright ins
 | `/app/groups/:groupId/events`                                       | Eventos del grupo.                                |
 | `/app/groups/:groupId/events/new`                                   | Creación de evento.                               |
 | `/app/groups/:groupId/events/:eventId`                              | Padrón, enlaces y gastos del evento.              |
+| `/app/groups/:groupId/events/:eventId/edit`                         | Edición de fechas, ubicación y enlaces.           |
 | `/app/groups/:groupId/events/:eventId/expenses/new`                 | Divisor manual de gasto.                          |
 | `/app/groups/:groupId/expenses/:expenseId`                          | Vista de gasto y reparto persistido.              |
 | `/app/groups/:groupId/settlements`                                  | Liquidaciones y estado de transferencias.         |
@@ -106,7 +130,7 @@ El adaptador está contrastado con `cabales-api/src/modules` y `docs/openapi.yam
 - `GET /auth/me`, `POST /auth/login`, `POST /auth/register`, `POST /auth/logout`.
 - `GET|POST /groups` y `GET /groups/:groupId`.
 - `POST /groups/:groupId/invitations` y `POST /groups/invitations/accept`.
-- `GET|POST /groups/:groupId/events` y `GET /groups/:groupId/events/:eventId`.
+- `GET|POST /groups/:groupId/events`, `GET|PATCH|DELETE /groups/:groupId/events/:eventId`, cancelación, RSVP propio y recordatorios.
 - `GET|POST /groups/:groupId/expenses` y `GET /groups/:groupId/expenses/:expenseId`.
 - `GET|POST /groups/:groupId/settlements` y `GET /groups/:groupId/settlements/:settlementId`.
 - `PATCH /groups/:groupId/settlements/:settlementId/transfers/:transferId/paid`.
@@ -126,17 +150,33 @@ Registro envía `{displayName,email,password}` y consume usuarios `{id,email,dis
 
 ## PWA y modo sin conexión
 
-El manifest incluye iconos PNG locales de 192 y 512 píxeles, color de tema, alcance, inicio y modo standalone. Workbox precachea el app shell y los assets versionados. Cualquier URL bajo `/api/v1/` usa `NetworkOnly`: las respuestas privadas/autenticadas no se persisten en Workbox. TanStack Query sí conserva respuestas en memoria durante la sesión, con `staleTime` de 20 segundos, y se limpia al cerrar o perder la sesión.
+El manifest incluye iconos PNG locales de 192 y 512 píxeles, color de tema, alcance, inicio y modo standalone. Workbox precachea el app shell y los assets versionados. Cualquier URL bajo `/api/v1/` usa `NetworkOnly`: las respuestas privadas/autenticadas no se persisten en Workbox. TanStack Query conserva respuestas en memoria y, para la allowlist P7, en IndexedDB por usuario; usa `staleTime` de 20 segundos y se limpia al cerrar o perder la sesión.
 
-La interfaz avisa cuando se pierde conexión y explica que no puede consultar ni guardar. No existe cola de escrituras offline porque el MVP no define todavía resolución de conflictos e idempotencia persistida. Cuando Workbox detecta una versión nueva, muestra una acción explícita para actualizar.
+La interfaz avisa cuando se pierde conexión, permite consultar lecturas previamente cargadas y explica que las mutaciones están deshabilitadas. No existe cola de escrituras offline: los cambios y pagos fallan claramente sin red. Cuando Workbox detecta una versión nueva, muestra una acción explícita para actualizar.
 
 La instalación exige producción HTTPS o `localhost`. El service worker se valida sobre `pnpm preview`, no durante el flujo normal de Vite en desarrollo.
+
+## P8: compartir y colaboración
+
+La PWA incluye `/share/summaries/:token` como página pública de solo lectura, enlaces generados y revocados desde eventos/liquidaciones, QR descargable para invitaciones, repetición de eventos y gastos con formularios editables, comentarios de evento, asociación de fondos con saldo/aportes y `/app/calendar` con vista mensual y agenda. Las respuestas se validan con Zod; React muestra comentarios como texto y escapa cualquier contenido.
+
+Se añadió `qrcode` como dependencia local de generación de PNG; no se usa ningún servicio externo. El token de invitación sigue viajando solo en `#token=` y nunca en la consulta HTTP. No hay variables de entorno nuevas.
 
 ## Accesibilidad y diseño
 
 La interfaz parte de 320 px, usa objetivos táctiles de al menos 44 px, navegación inferior móvil y riel lateral en escritorio. Incluye enlace de salto, landmarks, etiquetas, mensajes asociados, estados anunciables, foco visible y SVG decorativos ocultos al árbol accesible cuando hay texto equivalente.
 
 Los tokens mantienen contraste sobre una identidad glassmorphism moderada con fondo propio. `prefers-reduced-motion` elimina movimientos y `prefers-reduced-transparency` reemplaza paneles translúcidos por superficies sólidas. Las áreas fijas respetan `safe-area-inset-*`.
+
+## Decisiones P1: borradores OCR e items
+
+Los tests de error HTTP usan el sobre real `{ success: false, error }` (incluido `503 PROVIDER_UNAVAILABLE`) para distinguir una respuesta de API de un fallo de red, y acotan el aviso OCR antes de comprobar su mensaje.
+
+Docs mantiene el OCR como propuesta editable: al terminar un trabajo se eligen grupo y evento y se abre el formulario de gasto con comercio, total, fecha e items prellenados. Los campos no detectados se muestran como pendientes de revisión. El editor funciona también en gastos manuales, permite asignar cada item a varias personas, reparte con restos mayores y envía siempre `splitMode=EXACT` con centavos calculados.
+
+La creación conserva idempotencia y manda los valores revisados por la persona; el `ocrJobId` solo sirve para validar y enlazar el documento en el API.
+
+En P1f2 los dobles de E2E y unitarias comparten `eventDetail`, con la forma estricta del detalle real (`links`, `settlement`, `_count` y `groupMember.user`). El formulario conserva el título de revisión y muestra el error dentro del aviso OCR cuando la consulta del trabajo falla, para permitir el registro manual. `routeFetch` resuelve por pathname exacto para que una ruta de grupo no capture eventos ni categorías.
 
 ## Pruebas y límites actuales
 
@@ -149,8 +189,30 @@ Limitaciones conocidas del MVP:
 - No existe envío de correo: OWNER/ADMIN debe compartir manualmente el enlace de invitación mostrado una sola vez. El token se transporta en el fragmento de URL para no enviarlo en Referer, pero sigue siendo un bearer token y debe compartirse únicamente con la persona destinataria.
 - Eliminar integrantes no está implementado; el divisor usa el padrón devuelto por el detalle de evento.
 - Crear liquidaciones puede devolver 403 para miembros sin rol OWNER/ADMIN; la API conserva la decisión de autorización.
-- Cabudas, Docs, Estadísticas y Logros quedan pendientes y no realizan consultas.
-- No hay persistencia offline de datos remotos, datos demo ni escrituras offline.
+- Docs ya dispone de biblioteca, cifrado servido por API, enlaces temporales y bloqueo, pero sigue fuera de la caché offline. Estadísticas, Cabudas y Logros consultan datos reales y limitados por usuario.
+- La persistencia offline solo conserva la allowlist documentada en la decisión P7; no incluye datos demo ni escrituras offline.
 - Los nombres registrados en detalles financieros se enriquecen consultando el evento; si esa consulta falla, se presenta `Participante` con ID corto sin inventar identidad.
 
 El inventario de documentación por archivo está en `DOCUMENTACION.md`.
+
+# P7: consulta offline y exportaciones
+
+Estadísticas muestra comparación con el periodo equivalente anterior, proyección mensual marcada como estimación, ingresos personales, saldo mensual, fondos y exportación CSV/PDF/PNG. El PDF lo genera la API; el PNG se dibuja en el canvas nativo con el resumen ya cargado.
+
+La persistencia offline usa el caché de TanStack Query serializado en IndexedDB por usuario. Solo se guardan consultas allowlisted de grupos, gastos/estadísticas, Cabudas, ingresos y logros; la sesión, tokens, documentos, OCR, privacidad y mutaciones no se persisten. El límite es 2 MiB y la caducidad 7 días. La caché se elimina al cerrar sesión o cambiar de usuario. Las mutaciones detectan `navigator.onLine === false`, muestran un mensaje claro y nunca encolan pagos. El service worker conserva `NetworkOnly` para `/api/v1`.
+
+## P6: aportes, logros y ranking
+
+El detalle de un fondo permite a un gestor crear solicitudes con importe independiente por integrante y fecha limite. Cada fila muestra Pendiente, Pagado o Vencido; registrar un aporte con la solicitud seleccionada conserva la idempotencia del movimiento y actualiza su estado.
+
+`/app/achievements` muestra progreso real, umbrales Bronce/Plata/Oro y puntos. El resumen de cada grupo muestra insignias de sus miembros y un ranking amistoso; la privacidad se puede desactivar desde la pagina de logros. Los nuevos tipos de aviso (`fund.contribution_due` y `fund.contribution_overdue`) aparecen junto a eventos, documentos y push en Preferencias.
+
+No se crean filas demo en el cliente: si la API no devuelve solicitudes, logros o ranking, se presentan estados vacios y no se rellenan datos ficticios.
+
+## P4: Mis gastos
+
+Las pruebas E2E de P4 bloquean el service worker y mockean las respuestas validas de la sesion; asi el shell se verifica sin depender de un API local en el puerto 3000.
+
+La pantalla incluye filtros por mes, rango, categoria, etiqueta y texto; tambien permite administrar categorias y etiquetas personales. Los recurrentes muestran su proxima ejecucion y acciones de pausa, reanudacion y eliminacion.
+
+`/app/expenses` consume los contratos Zod de `src/api/module-schemas.ts` para mostrar exclusivamente los gastos personales en la pantalla de alta y filtros. La API también permite consultar el historial unificado con `scope=ALL|PERSONAL|GROUPS`, cursor y total del filtro. Las etiquetas se gestionan desde la misma sección y el selector de gasto grupal usa etiquetas con alcance validado por la API.

@@ -23,6 +23,61 @@ export const categorySchema = z.object({
 });
 export const categoryListSchema = z.array(categorySchema);
 
+export const tagSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  ownerUserId: id.nullable(),
+  name: z.string().min(1).max(50),
+});
+export const tagListSchema = z.array(tagSchema);
+
+const expenseTagSchema = z.object({ id, name: z.string(), groupId: id.nullable().optional(), ownerUserId: id.nullable().optional() });
+export const personalExpenseSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  eventId: id.nullable(),
+  ownerUserId: id.nullable(),
+  title: z.string(),
+  notes: z.string().nullable(),
+  totalCents: int.positive(),
+  subtotalCents: int.nonnegative(),
+  taxCents: int.nonnegative(),
+  tipCents: int.nonnegative(),
+  currency,
+  splitMode: z.enum(['EQUAL', 'EXACT', 'PERCENT']),
+  occurredAt: date,
+  createdAt: date,
+  categoryId: id.nullable(),
+  category: z.object({ id, name: z.string(), color: z.string().nullable() }).nullable().optional(),
+  tags: z.array(z.object({ tag: expenseTagSchema })),
+  group: z.object({ id, name: z.string() }).nullable().optional(),
+  event: z.object({ id, name: z.string() }).nullable().optional(),
+});
+export const personalExpenseListSchema = z.array(personalExpenseSchema);
+export const recurringExpenseSchema = z.object({
+  id,
+  groupId: id.nullable(),
+  eventId: id.nullable(),
+  ownerUserId: id.nullable(),
+  createdById: id.nullable(),
+  title: z.string(),
+  notes: z.string().nullable(),
+  amountCents: int.positive(),
+  currency,
+  categoryId: id.nullable(),
+  frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']),
+  chargeDay: int,
+  nextRunAt: date,
+  endsAt: nullableDate,
+  isActive: z.boolean(),
+  createdAt: date,
+  updatedAt: date,
+  category: z.object({ id, name: z.string(), color: z.string().nullable() }).nullable().optional(),
+  participants: z.array(z.object({ eventParticipantId: id, shareCents: int.nonnegative(), payerAmountCents: int.nonnegative().nullable() })),
+  tags: z.array(z.object({ tag: expenseTagSchema })),
+});
+export const recurringExpenseListSchema = z.array(recurringExpenseSchema);
+
 const alert = z.enum(['OK', 'WARNING', 'EXCEEDED']);
 const budgetProgress = z.object({
   periodStart: date,
@@ -69,6 +124,10 @@ const fundBase = z.object({
   balanceCents: int,
   myRole: fundRole.nullable(),
   canManage: z.boolean(),
+  contributionPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('ANY_MEMBER'),
+  withdrawalPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('MANAGERS'),
+  closingPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('MANAGERS'),
+  withdrawalLimitCents: int.nullish().default(null),
 });
 
 /** Fondo común con saldo derivado de movimientos. */
@@ -80,6 +139,8 @@ export const fundListSchema = z.array(fundSchema);
 const movementType = z.enum(['CONTRIBUTION', 'WITHDRAWAL', 'ADJUSTMENT']);
 export const fundDetailSchema = fundBase.extend({
   canContribute: z.boolean(),
+  canWithdraw: z.boolean(),
+  canClose: z.boolean(),
   totals: z.record(z.string(), z.object({ totalCents: int, count: int })),
   members: z.array(
     z.object({
@@ -90,6 +151,22 @@ export const fundDetailSchema = fundBase.extend({
       user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
     }),
   ),
+  contributionRequests: z
+    .array(
+      z.object({
+        id,
+        requestId: id,
+        dueAt: date,
+        createdAt: date.optional(),
+        amountCents: int.positive(),
+        status: z.enum(['PENDING', 'PAID', 'OVERDUE']),
+        paidAt: nullableDate,
+        fundMemberId: id,
+        groupMemberId: id,
+        user: userRef,
+      }),
+    )
+    .default([]),
 });
 export const fundMovementSchema = z.object({
   id,
@@ -104,13 +181,41 @@ export const createdMovementSchema = z.object({
   movement: fundMovementSchema,
   balanceCents: int,
 });
+export const fundContributionRequestListSchema = z.array(
+  z.object({
+    id,
+    requestId: id,
+    dueAt: date,
+    createdAt: date.optional(),
+    amountCents: int.positive(),
+    status: z.enum(['PENDING', 'PAID', 'OVERDUE']),
+    paidAt: nullableDate,
+    fundMemberId: id,
+    groupMemberId: id,
+    user: userRef,
+  }),
+);
 
 const access = z.enum(['VIEW', 'EDIT', 'MANAGE']);
+export const DOCUMENT_CATEGORIES = [
+  'IDENTIDAD',
+  'VIAJE',
+  'SEGURO',
+  'VEHICULO',
+  'SALUD',
+  'HOGAR',
+  'FINANZAS',
+  'OTRO',
+] as const;
+export const documentCategorySchema = z.enum(DOCUMENT_CATEGORIES);
 
 /** Documento privado; la clave de almacenamiento nunca llega al cliente. */
 export const documentSchema = z.object({
   id,
   name: z.string(),
+  category: documentCategorySchema.default('OTRO'),
+  expiresAt: nullableDate.default(null),
+  expiryNoticeDays: z.array(int.positive()).default([30, 7]),
   mimeType: z.string(),
   sizeBytes: int.nullable(),
   groupId: id.nullable(),
@@ -119,6 +224,9 @@ export const documentSchema = z.object({
   settlementId: id.nullable(),
   createdAt: date,
   updatedAt: date,
+  lastAccessedAt: nullableDate.default(null),
+  isLegacy: z.boolean().default(false),
+  isPinned: z.boolean().default(false),
   owner: userRef,
   access,
 });
@@ -128,19 +236,68 @@ export const documentGrantSchema = z.object({
   userId: id,
   displayName: z.string(),
   access,
+  expiresAt: nullableDate.default(null),
   createdAt: date,
 });
 export const documentGrantListSchema = z.array(documentGrantSchema);
+export const sharedLinkSchema = z.object({
+  id,
+  expiresAt: date,
+  maxAccesses: int.nullable(),
+  accessCount: int,
+  lastAccessAt: nullableDate,
+  revokedAt: nullableDate,
+  createdAt: date,
+  url: z.string().url().optional(),
+});
+export const sharedLinkListSchema = z.array(sharedLinkSchema);
+export const sharedDocumentSchema = z.object({
+  name: z.string(),
+});
+export const documentLockStatusSchema = z.object({
+  enabled: z.boolean(),
+  pinEnabled: z.boolean(),
+  webauthnEnabled: z.boolean(),
+  webauthnAvailable: z.boolean(),
+  unlockedUntil: nullableDate,
+  unlockTtlMinutes: int,
+});
+export const webAuthnOptionsSchema = z.record(z.string(), z.unknown());
 
 /** Propuesta del OCR: solo sugiere datos, nunca crea ni modifica gastos. */
 export const ocrProposalSchema = z.object({
   merchant: z.string().nullable().optional(),
   totalCents: int.nullable().optional(),
+  subtotalCents: int.nullable().optional(),
+  taxCents: int.nullable().optional(),
+  tipCents: int.nullable().optional(),
   currency: z.string().nullable().optional(),
   occurredAt: z.string().nullable().optional(),
   // El proveedor de la API usa `name` para mantener el contrato con OCR y el modelo de gastos.
-  items: z.array(z.object({ name: z.string(), amountCents: int })).default([]),
-  confidence: z.number().min(0).max(1).optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string(),
+        amountCents: int,
+        quantity: int.positive().optional(),
+        confidence: z.number().min(0).max(1).nullable().optional(),
+      }),
+    )
+    .default([]),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  confidenceByField: z
+    .object({
+      merchant: z.number().min(0).max(1).nullable(),
+      occurredAt: z.number().min(0).max(1).nullable(),
+      currency: z.number().min(0).max(1).nullable(),
+      totalCents: z.number().min(0).max(1).nullable(),
+      subtotalCents: z.number().min(0).max(1).nullable(),
+      taxCents: z.number().min(0).max(1).nullable(),
+      tipCents: z.number().min(0).max(1).nullable(),
+      items: z.number().min(0).max(1).nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 export const ocrJobSchema = z.object({
   id,
@@ -221,6 +378,9 @@ export const statisticsSchema = z.object({
   granularity: z.enum(['week', 'month']),
   totals: z.object({
     spentCents: int,
+    subtotalCents: int.optional(),
+    taxCents: int.optional(),
+    tipCents: int.optional(),
     expenseCount: int,
     myShareCents: int,
     myPaidCents: int,
@@ -259,7 +419,93 @@ export const statisticsSchema = z.object({
       alert,
     }),
   ),
+  comparison: z
+    .object({
+      period: z.object({ from: date, to: date }).optional(),
+      total: z.object({
+        currentCents: int,
+        previousCents: int,
+        absoluteCents: int,
+        percentage: z.number().nullable(),
+      }),
+      byCategory: z.array(
+        z.object({
+          categoryId: id.nullable(),
+          name: z.string(),
+          color: z.string().nullable(),
+          currentCents: int,
+          previousCents: int,
+          absoluteCents: int,
+          percentage: z.number().nullable(),
+        }),
+      ),
+    })
+    .optional(),
+  projection: z
+    .object({
+      month: z.string(),
+      asOf: date,
+      daysElapsed: int,
+      daysRemaining: int,
+      currentMonthSpentCents: int,
+      dailyRateCents: int,
+      recurrentPendingCents: int,
+      recurrentPending: z.array(
+        z.object({ id, title: z.string(), amountCents: int, nextRunAt: date }),
+      ),
+      remainingProjectionCents: int,
+      projectedMonthTotalCents: int,
+      methodology: z.string(),
+    })
+    .optional(),
+  incomeSummary: z
+    .object({
+      from: date,
+      to: date,
+      incomeCents: int,
+      expenseCents: int,
+      balanceCents: int,
+      byCategory: z.array(z.object({ category: z.string(), incomeCents: int, count: int })),
+    })
+    .optional(),
+  monthlyIncomeSummary: z
+    .object({
+      from: date,
+      to: date,
+      incomeCents: int,
+      expenseCents: int,
+      balanceCents: int,
+      byCategory: z.array(z.object({ category: z.string(), incomeCents: int, count: int })),
+    })
+    .optional(),
+  funds: z
+    .array(
+      z.object({
+        fundId: id,
+        name: z.string(),
+        groupId: id,
+        currency,
+        balanceCents: int,
+        contributionsCents: int,
+        withdrawalsCents: int,
+        adjustmentsCents: int,
+        movementCount: int,
+      }),
+    )
+    .optional(),
 });
+
+export const incomeSchema = z.object({
+  id,
+  amountCents: int,
+  date,
+  category: z.string(),
+  note: z.string().nullable(),
+  currency,
+  createdAt: date,
+  updatedAt: date,
+});
+export const incomeListSchema = z.array(incomeSchema);
 
 /** Tipos de aviso con preferencias configurables. */
 export const NOTIFICATION_TYPES = [
@@ -271,7 +517,14 @@ export const NOTIFICATION_TYPES = [
   'fund.movement',
   'ocr.finished',
   'privacy.updated',
+  'document.expiring',
+  'document.expired',
   'achievement.unlocked',
+  'event.reminder',
+  'event.comment',
+  'recurring.expense',
+  'fund.contribution_due',
+  'fund.contribution_overdue',
 ] as const;
 export const notificationSchema = z.object({
   id,
@@ -311,8 +564,43 @@ export const achievementSchema = z.object({
   progress: int,
   status: z.enum(['LOCKED', 'IN_PROGRESS', 'UNLOCKED']),
   awardedAt: nullableDate,
+  metric: z.string().optional(),
+  currentLevel: z.enum(['BRONZE', 'SILVER', 'GOLD']).nullable().optional(),
+  points: int.nonnegative().optional(),
+  levels: z
+    .array(
+      z.object({
+        level: z.enum(['BRONZE', 'SILVER', 'GOLD']),
+        threshold: int.positive(),
+        points: int.positive(),
+        achieved: z.boolean(),
+      }),
+    )
+    .default([]),
 });
 export const achievementListSchema = z.array(achievementSchema);
+const achievementBadgeSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  level: z.enum(['BRONZE', 'SILVER', 'GOLD']),
+  points: int.positive(),
+});
+export const achievementRankingSchema = z.array(
+  z.object({
+    rank: int.positive(),
+    points: int.nonnegative(),
+    user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
+    badges: z.array(achievementBadgeSchema),
+  }),
+);
+export const achievementMembersSchema = z.array(
+  z.object({
+    points: int.nonnegative(),
+    user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
+    badges: z.array(achievementBadgeSchema),
+  }),
+);
+export const achievementPrivacySchema = z.object({ rankingVisible: z.boolean() });
 
 const privacyType = z.enum(['ACCESS', 'RECTIFICATION', 'ERASURE', 'OBJECTION', 'PORTABILITY']);
 /** Solicitud ARCO-POL propia. */
@@ -330,24 +618,36 @@ export const privacyRequestSchema = z.object({
 export const privacyRequestListSchema = z.array(privacyRequestSchema);
 
 export type Category = z.output<typeof categorySchema>;
+export type Tag = z.output<typeof tagSchema>;
+export type PersonalExpense = z.output<typeof personalExpenseSchema>;
+export type RecurringExpense = z.output<typeof recurringExpenseSchema>;
 export type Budget = z.output<typeof budgetSchema>;
 export type BudgetDetail = z.output<typeof budgetDetailSchema>;
 export type BudgetAlert = z.output<typeof alert>;
 export type Fund = z.output<typeof fundSchema>;
 export type FundDetail = z.output<typeof fundDetailSchema>;
 export type FundMovement = z.output<typeof fundMovementSchema>;
+export type FundContributionRequest = z.output<typeof fundContributionRequestListSchema>[number];
 export type FundMovementType = z.output<typeof movementType>;
 export type Document = z.output<typeof documentSchema>;
 export type DocumentAccess = z.output<typeof access>;
 export type DocumentGrant = z.output<typeof documentGrantSchema>;
+export type SharedLink = z.output<typeof sharedLinkSchema>;
+export type SharedDocument = z.output<typeof sharedDocumentSchema>;
+export type DocumentLockStatus = z.output<typeof documentLockStatusSchema>;
+export type WebAuthnOptions = z.output<typeof webAuthnOptionsSchema>;
 export type OcrJob = z.output<typeof ocrJobSchema>;
 export type CabudasSummary = z.output<typeof cabudasSummarySchema>;
 export type CabudasTransfer = z.output<typeof cabudasTransferSchema>;
 export type Statistics = z.output<typeof statisticsSchema>;
+export type Income = z.output<typeof incomeSchema>;
 export type Notification = z.output<typeof notificationSchema>;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationPreferences = z.output<typeof notificationPreferencesSchema>;
 export type PushConfig = z.output<typeof pushConfigSchema>;
 export type Achievement = z.output<typeof achievementSchema>;
+export type AchievementBadge = z.output<typeof achievementBadgeSchema>;
+export type AchievementRankingRow = z.output<typeof achievementRankingSchema>[number];
+export type AchievementMemberRow = z.output<typeof achievementMembersSchema>[number];
 export type PrivacyRequest = z.output<typeof privacyRequestSchema>;
 export type PrivacyRequestType = z.output<typeof privacyType>;

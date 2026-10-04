@@ -3,6 +3,7 @@ import { z } from 'zod';
 const id = z.string().uuid();
 const date = z.string().datetime();
 const currency = z.string().regex(/^[A-Z]{3}$/);
+const int = z.number().int();
 const cents = z.number().int().positive().max(2_147_483_647);
 const role = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
 const eventStatus = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
@@ -43,6 +44,13 @@ export const sessionSchema = z
     csrfToken: z.string().min(16).max(512).optional(),
   })
   .transform((session) => session);
+
+export const authConfigSchema = z.strictObject({ googleEnabled: z.boolean() });
+export const authMethodsSchema = z.strictObject({
+  providers: z.array(z.enum(['PASSWORD', 'GOOGLE'])).max(4),
+  hasPassword: z.boolean(),
+});
+export const googleLinkStartSchema = z.strictObject({ authorizationUrl: z.string().url() });
 
 /** Valida y adapta la forma observada de cada elemento de `GET /groups`. */
 export const groupListSchema = z
@@ -152,7 +160,17 @@ const rawEventBase = {
   name: z.string().min(2).max(160),
   description: z.string().max(1000).nullable(),
   startsAt: date,
+  endsAt: date.nullable(),
+  locationName: z.string().max(160).nullable(),
+  locationAddress: z.string().max(500).nullable(),
+  mapsUrl: z
+    .string()
+    .url()
+    .refine((value) => value.startsWith('https://'))
+    .nullable(),
+  timeZone: z.string().max(80).nullable(),
   status: eventStatus,
+  createdById: id,
   createdAt: date,
 };
 
@@ -177,7 +195,13 @@ export const eventListSchema = z
       name: event.name,
       description: toDescription(event.description),
       startsAt: event.startsAt,
+      endsAt: event.endsAt ?? undefined,
+      locationName: event.locationName ?? undefined,
+      locationAddress: event.locationAddress ?? undefined,
+      mapsUrl: event.mapsUrl ?? undefined,
+      timeZone: event.timeZone ?? undefined,
       status: event.status,
+      createdById: event.createdById,
       createdAt: event.createdAt,
       participantCount: event._count.participants,
       expenseCount: event._count.expenses,
@@ -190,23 +214,38 @@ export const createdEventSchema = z
   .strictObject({
     ...rawEventBase,
     participants: z.array(
-      z.strictObject({ id, groupMemberId: id.nullable(), guestName: z.string().nullable() }),
+      z.strictObject({
+        id,
+        groupMemberId: id.nullable(),
+        guestName: z.string().nullable(),
+        rsvpStatus: z.enum(['PENDING', 'GOING', 'MAYBE', 'DECLINED']),
+        respondedAt: date.nullable(),
+      }),
     ),
   })
   .transform((event) => ({
     ...event,
     description: toDescription(event.description),
+    endsAt: event.endsAt ?? undefined,
+    locationName: event.locationName ?? undefined,
+    locationAddress: event.locationAddress ?? undefined,
+    mapsUrl: event.mapsUrl ?? undefined,
+    timeZone: event.timeZone ?? undefined,
     participantCount: event.participants.length,
     participants: event.participants.map((participant) => ({
       id: participant.id,
       guestName: participant.guestName ?? undefined,
       groupMember: participant.groupMemberId ? { id: participant.groupMemberId } : null,
+      rsvpStatus: participant.rsvpStatus,
+      respondedAt: participant.respondedAt ?? undefined,
     })),
   }));
 
 const rawEventParticipant = z.strictObject({
   id,
   guestName: z.string().nullable(),
+  rsvpStatus: z.enum(['PENDING', 'GOING', 'MAYBE', 'DECLINED']),
+  respondedAt: date.nullable(),
   groupMember: z
     .strictObject({
       id,
@@ -225,8 +264,18 @@ export const eventDetailSchema = z
     ...rawEventBase,
     participants: z.array(rawEventParticipant),
     links: z.array(z.strictObject({ id, label: z.string().min(1).max(80), url: z.string().url() })),
+    reminders: z.array(
+      z.strictObject({ id, minutesBefore: z.number().int().positive(), enabled: z.boolean() }),
+    ),
+    rsvpCounts: z.strictObject({
+      PENDING: z.number().int().nonnegative(),
+      GOING: z.number().int().nonnegative(),
+      MAYBE: z.number().int().nonnegative(),
+      DECLINED: z.number().int().nonnegative(),
+    }),
     settlement: rawSettlementReference.extend({ createdAt: date }).strict().nullable(),
     _count: z.strictObject({ expenses: z.number().int().nonnegative() }),
+    funds: z.array(z.strictObject({ fundId: id, name: z.string(), currency, balanceCents: int, contributionsCents: int, movementCount: int })).optional(),
   })
   .transform((event) => ({
     id: event.id,
@@ -234,7 +283,13 @@ export const eventDetailSchema = z
     name: event.name,
     description: toDescription(event.description),
     startsAt: event.startsAt,
+    endsAt: event.endsAt ?? undefined,
+    locationName: event.locationName ?? undefined,
+    locationAddress: event.locationAddress ?? undefined,
+    mapsUrl: event.mapsUrl ?? undefined,
+    timeZone: event.timeZone ?? undefined,
     status: event.status,
+    createdById: event.createdById,
     createdAt: event.createdAt,
     participantCount: event.participants.length,
     expenseCount: event._count.expenses,
@@ -242,18 +297,34 @@ export const eventDetailSchema = z
       id: participant.id,
       guestName: participant.guestName ?? undefined,
       groupMember: participant.groupMember,
+      rsvpStatus: participant.rsvpStatus,
+      respondedAt: participant.respondedAt ?? undefined,
     })),
     links: event.links,
+    reminders: event.reminders,
+    rsvpCounts: event.rsvpCounts,
     settlement: event.settlement ?? undefined,
+    ...(event.funds === undefined ? {} : { funds: event.funds }),
   }));
 
 const rawExpenseParticipant = z.strictObject({
   id,
   eventParticipantId: id,
-  shareCents: cents,
+  subtotalCents: z.number().int().nonnegative().optional(),
+  taxCents: z.number().int().nonnegative().optional(),
+  tipCents: z.number().int().nonnegative().optional(),
+  shareCents: z.number().int().nonnegative(),
   eventParticipant: z.strictObject({
     guestName: z.string().nullable(),
     groupMemberId: id.nullable(),
+  }),
+});
+const rawExpenseTag = z.strictObject({
+  tag: z.strictObject({
+    id,
+    name: z.string(),
+    groupId: id.nullable().optional(),
+    ownerUserId: id.nullable().optional(),
   }),
 });
 
@@ -265,11 +336,15 @@ export const expenseListSchema = z
       eventId: id,
       title: z.string().min(1).max(160),
       totalCents: cents,
+      subtotalCents: z.number().int().nonnegative().optional(),
+      taxCents: z.number().int().nonnegative().optional(),
+      tipCents: z.number().int().nonnegative().optional(),
       currency,
-      splitMode: z.enum(['EQUAL', 'EXACT']),
+      splitMode: z.enum(['EQUAL', 'EXACT', 'PERCENT']),
       occurredAt: date,
       createdAt: date,
       categoryId: id.nullable().optional(),
+      tags: z.array(rawExpenseTag).optional(),
       _count: z.strictObject({
         participants: z.number().int().nonnegative(),
         items: z.number().int().nonnegative(),
@@ -282,11 +357,15 @@ export const expenseListSchema = z
       eventId: expense.eventId,
       title: expense.title,
       totalCents: expense.totalCents,
+      subtotalCents: expense.subtotalCents ?? expense.totalCents,
+      taxCents: expense.taxCents ?? 0,
+      tipCents: expense.tipCents ?? 0,
       currency: expense.currency,
       splitMode: expense.splitMode,
       occurredAt: expense.occurredAt,
       createdAt: expense.createdAt,
       categoryId: expense.categoryId ?? undefined,
+      tags: (expense.tags ?? []).map(({ tag }) => tag),
       participantCount: expense._count.participants,
       itemCount: expense._count.items,
     })),
@@ -301,11 +380,17 @@ export const expenseDetailSchema = z
     title: z.string().min(1).max(160),
     notes: z.string().max(1000).nullable(),
     totalCents: cents,
+    subtotalCents: z.number().int().nonnegative().optional(),
+    taxCents: z.number().int().nonnegative().optional(),
+    tipCents: z.number().int().nonnegative().optional(),
     currency,
-    splitMode: z.enum(['EQUAL', 'EXACT']),
+    splitMode: z.enum(['EQUAL', 'EXACT', 'PERCENT']),
     occurredAt: date,
     createdAt: date,
     categoryId: id.nullable().optional(),
+    ownerUserId: id.nullable().optional(),
+    recurringExpenseId: id.nullable().optional(),
+    tags: z.array(rawExpenseTag).optional(),
     participants: z.array(rawExpenseParticipant),
     payers: z.array(
       z.strictObject({
@@ -336,13 +421,20 @@ export const expenseDetailSchema = z
     title: expense.title,
     notes: expense.notes ?? undefined,
     totalCents: expense.totalCents,
+    subtotalCents: expense.subtotalCents ?? expense.totalCents,
+    taxCents: expense.taxCents ?? 0,
+    tipCents: expense.tipCents ?? 0,
     currency: expense.currency,
     splitMode: expense.splitMode,
     occurredAt: expense.occurredAt,
     createdAt: expense.createdAt,
     categoryId: expense.categoryId ?? undefined,
+    tags: (expense.tags ?? []).map(({ tag }) => tag),
     participants: expense.participants.map((participant) => ({
       ...participant,
+      subtotalCents: participant.subtotalCents ?? participant.shareCents,
+      taxCents: participant.taxCents ?? 0,
+      tipCents: participant.tipCents ?? 0,
       eventParticipant: {
         guestName: participant.eventParticipant.guestName ?? undefined,
         groupMemberId: participant.eventParticipant.groupMemberId ?? undefined,
@@ -467,3 +559,65 @@ export const paidTransferSchema = z.strictObject({
   amountCents: cents,
   paidAt: date,
 });
+
+export const eventCommentSchema = z.strictObject({
+  id,
+  body: z.string().min(1).max(2000),
+  authorUserId: id,
+  author: z.strictObject({
+    id,
+    displayName: z.string(),
+    avatarUrl: z.string().url().nullable(),
+  }),
+  createdAt: date,
+  updatedAt: date,
+});
+export const eventCommentListSchema = z.array(eventCommentSchema);
+export const eventFundsSchema = z.array(
+  z.strictObject({
+    fundId: id,
+    name: z.string(),
+    currency,
+    balanceCents: int,
+    contributionsCents: int,
+    movementCount: int,
+  }),
+);
+export const publicSummarySchema = z.strictObject({
+  type: z.enum(['EVENT', 'SETTLEMENT']),
+  expiresAt: date,
+  groupName: z.string(),
+  eventName: z.string(),
+  status: z.enum(['OPEN', 'CLOSED', 'CANCELLED', 'COMPLETED']),
+  currency,
+  totalCents: int,
+  participants: z.array(z.strictObject({ displayName: z.string() })),
+  transfers: z.array(
+    z.strictObject({ debtor: z.string(), creditor: z.string(), amountCents: int, status: z.string() }),
+  ),
+});
+export const publicShareLinkSchema = z.strictObject({
+  id,
+  eventId: id.nullable(),
+  settlementId: id.nullable(),
+  expiresAt: date,
+  revokedAt: date.nullable().optional(),
+  createdAt: date,
+  url: z.string().url().optional(),
+});
+export const publicShareLinkListSchema = z.array(publicShareLinkSchema);
+export const calendarEventListSchema = z.array(
+  z.strictObject({
+    id,
+    groupId: id,
+    name: z.string(),
+    description: z.string().nullable(),
+    startsAt: date,
+    endsAt: date.nullable(),
+    status: z.enum(['OPEN', 'CLOSED', 'CANCELLED']),
+    locationName: z.string().nullable(),
+    group: z.strictObject({ name: z.string(), currency }),
+  }),
+);
+export const repeatEventTemplateSchema = z.record(z.string(), z.unknown());
+export const repeatExpenseTemplateSchema = z.record(z.string(), z.unknown());

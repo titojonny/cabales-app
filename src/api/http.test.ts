@@ -43,4 +43,17 @@ describe('request', () => {
     const headers = fetchMock.mock.calls[0][1]?.headers as Headers;
     expect(headers.get('X-CSRF-Token')).toBe('csrf-from-readable-cookie-123');
   });
+
+  it('rechaza mutaciones sin conexion y no las encola', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('navigator', { onLine: false });
+
+    await expect(
+      request('/incomes', { method: 'POST', body: { amountCents: 100 } }),
+    ).rejects.toMatchObject({
+      code: 'OFFLINE_MUTATION',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

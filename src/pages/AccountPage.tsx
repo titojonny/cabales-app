@@ -1,13 +1,15 @@
 import { Button } from '@heroui/react';
+import { startRegistration } from '@simplewebauthn/browser';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Session } from '../api/contracts';
+import { cabalesApi } from '../api/cabales-api';
 import { clearCsrfToken } from '../api/http';
 import { moduleKeys, moduleQueries } from '../api/module-queries';
 import type { PrivacyRequest, PrivacyRequestType } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
-import { queryKeys } from '../api/queries';
+import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { ErrorMessage, FieldError, formatDate, Icon } from '../components/ui';
 import { normalizeText } from '../domain/validation';
@@ -84,6 +86,245 @@ function ProfileSection() {
           {save.isPending ? 'Guardando…' : 'Guardar'}
         </Button>
       </form>
+    </section>
+  );
+}
+
+function ProfileBadgesSection() {
+  const achievements = useQuery(moduleQueries.achievements());
+  const badges = achievements.data?.filter((achievement) => achievement.currentLevel) ?? [];
+  return (
+    <section className="form-card glass-panel" aria-labelledby="profile-badges-title">
+      <h2 id="profile-badges-title">Tus insignias</h2>
+      {achievements.isPending && <p aria-busy="true">Cargando insignias…</p>}
+      {achievements.isError && <ErrorMessage error={achievements.error} />}
+      {!achievements.isPending && !achievements.isError && badges.length === 0 && (
+        <p className="muted">Aun no tienes insignias obtenidas.</p>
+      )}
+      {badges.length > 0 && (
+        <div className="chip-list">
+          {badges.map((badge) => (
+            <span className="status-chip success" key={badge.code}>
+              {badge.name} ·{' '}
+              {badge.currentLevel === 'GOLD'
+                ? 'Oro'
+                : badge.currentLevel === 'SILVER'
+                  ? 'Plata'
+                  : 'Bronce'}
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GoogleAccountSection() {
+  const queryClient = useQueryClient();
+  const config = useQuery(queries.authConfig());
+  const methods = useQuery(queries.authMethods());
+  const link = useMutation({
+    mutationFn: cabalesApi.startGoogleLink,
+    onSuccess: ({ authorizationUrl }) => window.location.assign(authorizationUrl),
+  });
+  const unlink = useMutation({
+    mutationFn: cabalesApi.unlinkGoogle,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.authMethods }),
+  });
+
+  if (methods.isPending || config.isPending)
+    return (
+      <section className="form-card glass-panel" aria-busy="true">
+        <h2>Accesos vinculados</h2>
+        <p className="muted">Consultando tus métodos de acceso…</p>
+      </section>
+    );
+  if (methods.isError) {
+    return (
+      <section className="form-card glass-panel">
+        <h2>Accesos vinculados</h2>
+        <ErrorMessage error={methods.error} />
+      </section>
+    );
+  }
+  if (!methods.data)
+    return (
+      <section className="form-card glass-panel" aria-busy="true">
+        <h2>Accesos vinculados</h2>
+        <p className="muted">Aún no hay métodos de acceso disponibles.</p>
+      </section>
+    );
+  const authMethods = methods.data;
+  const linked = authMethods.providers.includes('GOOGLE');
+  return (
+    <section className="form-card glass-panel" aria-labelledby="auth-methods-title">
+      <h2 id="auth-methods-title">Accesos vinculados</h2>
+      <p className="muted small">
+        Usa Google con el mismo correo verificado para entrar sin crear otra cuenta.
+      </p>
+      {linked ? (
+        <div className="account-method-row">
+          <span>
+            <strong>Google</strong>
+            <small>Vinculado</small>
+          </span>
+          <Button
+            variant="tertiary"
+            type="button"
+            isDisabled={
+              unlink.isPending || (!authMethods.hasPassword && authMethods.providers.length <= 1)
+            }
+            onPress={() => unlink.mutate()}
+          >
+            {unlink.isPending ? 'Desvinculando…' : 'Desvincular'}
+          </Button>
+        </div>
+      ) : config.data?.googleEnabled ? (
+        <Button
+          variant="primary"
+          type="button"
+          isDisabled={link.isPending}
+          onPress={() => link.mutate()}
+        >
+          {link.isPending ? 'Abriendo Google…' : 'Vincular Google'}
+        </Button>
+      ) : (
+        <p className="muted small">Google no está habilitado en este servidor.</p>
+      )}
+      {!authMethods.hasPassword && linked && authMethods.providers.length <= 1 && (
+        <p className="muted small" role="status">
+          Añade una contraseña antes de desvincular Google para conservar otro método de acceso.
+        </p>
+      )}
+      {(link.isError || unlink.isError || config.isError) && (
+        <ErrorMessage error={link.error ?? unlink.error ?? config.error} />
+      )}
+    </section>
+  );
+}
+
+function DocumentLockSection() {
+  const queryClient = useQueryClient();
+  const status = useQuery({
+    queryKey: ['documents', 'lock'],
+    queryFn: modulesApi.documentLockStatus,
+    retry: false,
+  });
+  const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
+  const [ttl, setTtl] = useState('10');
+  const browserSupportsWebAuthn = typeof window !== 'undefined' && 'PublicKeyCredential' in window;
+  const save = useMutation({
+    mutationFn: () =>
+      modulesApi.configureDocumentLock({
+        password,
+        ...(pin ? { pin } : {}),
+        unlockTtlMinutes: Number(ttl),
+      }),
+    onSuccess: () => {
+      setPassword('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => modulesApi.removeDocumentLock(password),
+    onSuccess: () => {
+      setPassword('');
+      setPin('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const register = useMutation({
+    mutationFn: async () => {
+      const options = await modulesApi.webAuthnRegistrationOptions(password);
+      const response = await startRegistration({ optionsJSON: options as never });
+      return modulesApi.webAuthnRegistrationVerify(response as unknown as Record<string, unknown>);
+    },
+    onSuccess: () => {
+      setPassword('');
+      void queryClient.invalidateQueries({ queryKey: ['documents', 'lock'] });
+    },
+  });
+  const error = save.error ?? remove.error ?? register.error;
+  return (
+    <section
+      className="form-card glass-panel"
+      id="bloqueo-docs"
+      aria-labelledby="document-lock-title"
+    >
+      <h2 id="document-lock-title">Bloqueo de Docs</h2>
+      <p className="muted small">
+        {status.data?.enabled ? 'Activo' : 'Inactivo'} · desbloqueo reciente:{' '}
+        {status.data?.unlockTtlMinutes ?? 10} minutos.
+      </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+        noValidate
+      >
+        <label htmlFor="docs-lock-password">Contraseña actual</label>
+        <input
+          id="docs-lock-password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+        <label htmlFor="docs-lock-pin">
+          PIN nuevo (6 a 12 dígitos; vacío conserva el PIN actual)
+        </label>
+        <input
+          id="docs-lock-pin"
+          inputMode="numeric"
+          minLength={6}
+          maxLength={12}
+          value={pin}
+          onChange={(event) => setPin(event.target.value)}
+        />
+        <label htmlFor="docs-lock-ttl">Minutos de desbloqueo</label>
+        <input
+          id="docs-lock-ttl"
+          type="number"
+          min={1}
+          max={60}
+          value={ttl}
+          onChange={(event) => setTtl(event.target.value)}
+        />
+        <div className="button-row">
+          <Button variant="primary" type="submit" isDisabled={save.isPending || !password}>
+            {status.data?.enabled ? 'Guardar cambios' : 'Activar bloqueo'}
+          </Button>
+          {status.data?.enabled && (
+            <Button
+              variant="danger-soft"
+              type="button"
+              isDisabled={remove.isPending || !password}
+              onPress={() => remove.mutate()}
+            >
+              Quitar bloqueo
+            </Button>
+          )}
+        </div>
+      </form>
+      {status.data?.webauthnAvailable && browserSupportsWebAuthn && (
+        <Button
+          variant="tertiary"
+          type="button"
+          isDisabled={register.isPending || !password}
+          onPress={() => register.mutate()}
+        >
+          {register.isPending ? 'Esperando passkey…' : 'Añadir passkey o biometría'}
+        </Button>
+      )}
+      {status.data?.webauthnAvailable && !browserSupportsWebAuthn && (
+        <p className="muted small">
+          Este navegador no admite passkeys; puedes proteger Docs con un PIN.
+        </p>
+      )}
+      {error && <ErrorMessage error={error} />}
     </section>
   );
 }
@@ -310,6 +551,9 @@ export function AccountPage() {
       </nav>
       <div className="account-grid">
         <ProfileSection />
+        <ProfileBadgesSection />
+        <GoogleAccountSection />
+        <DocumentLockSection />
         <PrivacySection />
       </div>
       <div className="button-row">
