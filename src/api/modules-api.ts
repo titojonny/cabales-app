@@ -2,7 +2,10 @@ import { z } from 'zod';
 import type { CreatedInvitation, Invitation, InvitationPreview, User } from './contracts';
 import { request, requestFile, requestWithMeta } from './http';
 import {
+  achievementMembersSchema,
   achievementListSchema,
+  achievementPrivacySchema,
+  achievementRankingSchema,
   budgetDetailSchema,
   budgetListSchema,
   budgetSchema,
@@ -24,6 +27,7 @@ import {
   documentLockStatusSchema,
   downloadUrlSchema,
   fundDetailSchema,
+  fundContributionRequestListSchema,
   fundListSchema,
   fundMovementListSchema,
   fundSchema,
@@ -46,6 +50,7 @@ import {
   type DocumentAccess,
   type DocumentLockStatus,
   type FundMovementType,
+  type FundContributionRequest,
   type NotificationPreferences,
   type PrivacyRequestType,
 } from './module-schemas';
@@ -226,7 +231,12 @@ export const modulesApi = {
   createFundMovement: (
     groupId: string,
     fundId: string,
-    input: { type: FundMovementType; amountCents: number; description?: string },
+    input: {
+      type: FundMovementType;
+      amountCents: number;
+      description?: string;
+      contributionRequestMemberId?: string;
+    },
     idempotencyKey: string,
   ) =>
     request(`/groups/${enc(groupId)}/funds/${enc(fundId)}/movements`, {
@@ -235,6 +245,20 @@ export const modulesApi = {
       idempotencyKey,
       schema: createdMovementSchema,
     }),
+  createFundContributionRequest: (
+    groupId: string,
+    fundId: string,
+    input: { dueAt: string; members: Array<{ fundMemberId: string; amountCents: number }> },
+  ) =>
+    request(`/groups/${enc(groupId)}/funds/${enc(fundId)}/contribution-requests`, {
+      method: 'POST',
+      body: input,
+    }),
+  fundContributionRequests: (groupId: string, fundId: string) =>
+    request<FundContributionRequest[]>(
+      `/groups/${enc(groupId)}/funds/${enc(fundId)}/contribution-requests`,
+      { schema: fundContributionRequestListSchema },
+    ),
 
   // Documentos.
   documents: (filters: {
@@ -403,6 +427,17 @@ export const modulesApi = {
 
   // Logros.
   achievements: () => request('/achievements', { schema: achievementListSchema }),
+  achievementPrivacy: () => request('/achievements/privacy', { schema: achievementPrivacySchema }),
+  updateAchievementPrivacy: (rankingVisible: boolean) =>
+    request('/achievements/privacy', {
+      method: 'PUT',
+      body: { rankingVisible },
+      schema: achievementPrivacySchema,
+    }),
+  achievementRanking: (groupId: string) =>
+    request(`/groups/${enc(groupId)}/achievements/ranking`, { schema: achievementRankingSchema }),
+  achievementMembers: (groupId: string) =>
+    request(`/groups/${enc(groupId)}/achievements/members`, { schema: achievementMembersSchema }),
 
   // Privacidad.
   privacyRequests: () => request('/privacy/requests', { schema: privacyRequestListSchema }),

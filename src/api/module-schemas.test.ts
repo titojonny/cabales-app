@@ -72,6 +72,37 @@ describe('contrato de módulos con respuestas reales', () => {
     );
   });
 
+  it('valida preferencias de aportes y niveles de insignias P6', () => {
+    const preferences = modules.notificationPreferencesSchema.parse({
+      preferences: [
+        { type: 'fund.contribution_due', inApp: true, email: false, push: true },
+        { type: 'fund.contribution_overdue', inApp: true, email: true, push: true },
+      ],
+      channels: { inApp: true, email: true, push: true },
+    });
+    expect(preferences.preferences[0]?.type).toBe('fund.contribution_due');
+    const [achievement] = modules.achievementListSchema.parse([
+      {
+        code: 'FUND_KING',
+        name: 'Rey de las cabudas',
+        description: 'Registra aportes.',
+        category: 'CABUDAS',
+        target: 15,
+        progress: 5,
+        status: 'UNLOCKED',
+        awardedAt: timestamp,
+        currentLevel: 'SILVER',
+        points: 2,
+        levels: [
+          { level: 'BRONZE', threshold: 1, points: 1, achieved: true },
+          { level: 'SILVER', threshold: 5, points: 2, achieved: true },
+          { level: 'GOLD', threshold: 15, points: 3, achieved: false },
+        ],
+      },
+    ]);
+    expect(achievement?.currentLevel).toBe('SILVER');
+  });
+
   it('acepta categorias globales y propuestas OCR con items nombrados', () => {
     expect(
       modules.categorySchema.parse({

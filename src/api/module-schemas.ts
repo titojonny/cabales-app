@@ -145,6 +145,22 @@ export const fundDetailSchema = fundBase.extend({
       user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
     }),
   ),
+  contributionRequests: z
+    .array(
+      z.object({
+        id,
+        requestId: id,
+        dueAt: date,
+        createdAt: date.optional(),
+        amountCents: int.positive(),
+        status: z.enum(['PENDING', 'PAID', 'OVERDUE']),
+        paidAt: nullableDate,
+        fundMemberId: id,
+        groupMemberId: id,
+        user: userRef,
+      }),
+    )
+    .default([]),
 });
 export const fundMovementSchema = z.object({
   id,
@@ -159,6 +175,20 @@ export const createdMovementSchema = z.object({
   movement: fundMovementSchema,
   balanceCents: int,
 });
+export const fundContributionRequestListSchema = z.array(
+  z.object({
+    id,
+    requestId: id,
+    dueAt: date,
+    createdAt: date.optional(),
+    amountCents: int.positive(),
+    status: z.enum(['PENDING', 'PAID', 'OVERDUE']),
+    paidAt: nullableDate,
+    fundMemberId: id,
+    groupMemberId: id,
+    user: userRef,
+  }),
+);
 
 const access = z.enum(['VIEW', 'EDIT', 'MANAGE']);
 export const DOCUMENT_CATEGORIES = [
@@ -485,6 +515,9 @@ export const NOTIFICATION_TYPES = [
   'document.expired',
   'achievement.unlocked',
   'event.reminder',
+  'recurring.expense',
+  'fund.contribution_due',
+  'fund.contribution_overdue',
 ] as const;
 export const notificationSchema = z.object({
   id,
@@ -524,8 +557,43 @@ export const achievementSchema = z.object({
   progress: int,
   status: z.enum(['LOCKED', 'IN_PROGRESS', 'UNLOCKED']),
   awardedAt: nullableDate,
+  metric: z.string().optional(),
+  currentLevel: z.enum(['BRONZE', 'SILVER', 'GOLD']).nullable().optional(),
+  points: int.nonnegative().optional(),
+  levels: z
+    .array(
+      z.object({
+        level: z.enum(['BRONZE', 'SILVER', 'GOLD']),
+        threshold: int.positive(),
+        points: int.positive(),
+        achieved: z.boolean(),
+      }),
+    )
+    .default([]),
 });
 export const achievementListSchema = z.array(achievementSchema);
+const achievementBadgeSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  level: z.enum(['BRONZE', 'SILVER', 'GOLD']),
+  points: int.positive(),
+});
+export const achievementRankingSchema = z.array(
+  z.object({
+    rank: int.positive(),
+    points: int.nonnegative(),
+    user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
+    badges: z.array(achievementBadgeSchema),
+  }),
+);
+export const achievementMembersSchema = z.array(
+  z.object({
+    points: int.nonnegative(),
+    user: z.object({ id, displayName: z.string(), avatarUrl: z.string().nullable() }),
+    badges: z.array(achievementBadgeSchema),
+  }),
+);
+export const achievementPrivacySchema = z.object({ rankingVisible: z.boolean() });
 
 const privacyType = z.enum(['ACCESS', 'RECTIFICATION', 'ERASURE', 'OBJECTION', 'PORTABILITY']);
 /** Solicitud ARCO-POL propia. */
@@ -552,6 +620,7 @@ export type BudgetAlert = z.output<typeof alert>;
 export type Fund = z.output<typeof fundSchema>;
 export type FundDetail = z.output<typeof fundDetailSchema>;
 export type FundMovement = z.output<typeof fundMovementSchema>;
+export type FundContributionRequest = z.output<typeof fundContributionRequestListSchema>[number];
 export type FundMovementType = z.output<typeof movementType>;
 export type Document = z.output<typeof documentSchema>;
 export type DocumentAccess = z.output<typeof access>;
@@ -570,5 +639,8 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationPreferences = z.output<typeof notificationPreferencesSchema>;
 export type PushConfig = z.output<typeof pushConfigSchema>;
 export type Achievement = z.output<typeof achievementSchema>;
+export type AchievementBadge = z.output<typeof achievementBadgeSchema>;
+export type AchievementRankingRow = z.output<typeof achievementRankingSchema>[number];
+export type AchievementMemberRow = z.output<typeof achievementMembersSchema>[number];
 export type PrivacyRequest = z.output<typeof privacyRequestSchema>;
 export type PrivacyRequestType = z.output<typeof privacyType>;

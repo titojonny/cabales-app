@@ -33,6 +33,9 @@ const typeLabel: Record<NotificationType, string> = {
   'document.expired': 'Documentos vencidos',
   'achievement.unlocked': 'Logros',
   'event.reminder': 'Recordatorios de eventos',
+  'recurring.expense': 'Gastos recurrentes',
+  'fund.contribution_due': 'Aportes próximos a vencer',
+  'fund.contribution_overdue': 'Aportes vencidos',
 };
 
 /** Destino interno de un aviso; solo rutas propias, nunca URLs recibidas. */
@@ -57,6 +60,13 @@ function notificationLink(notification: Notification): string | undefined {
   if (notification.type === 'achievement.unlocked') return '/app/achievements';
   if (notification.type === 'event.reminder' && groupId && value('eventId'))
     return `/app/groups/${groupId}/events/${value('eventId')}`;
+  if (
+    (notification.type === 'fund.contribution_due' ||
+      notification.type === 'fund.contribution_overdue') &&
+    groupId &&
+    value('fundId')
+  )
+    return `/app/groups/${groupId}/funds/${value('fundId')}`;
   return undefined;
 }
 

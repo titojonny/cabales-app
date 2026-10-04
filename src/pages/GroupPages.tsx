@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
+import { moduleQueries } from '../api/module-queries';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { eventSchema, groupSchema, type EventValues, type GroupValues } from '../domain/validation';
@@ -153,6 +154,14 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
   const { session } = useAuth();
   const group = useQuery(queries.group(groupId, session?.user.id ?? ''));
   const events = useQuery({ ...queries.events(groupId), enabled: tab === 'events' });
+  const achievementMembers = useQuery({
+    ...moduleQueries.achievementMembers(groupId),
+    enabled: tab === 'summary',
+  });
+  const achievementRanking = useQuery({
+    ...moduleQueries.achievementRanking(groupId),
+    enabled: tab === 'summary',
+  });
   if (group.isPending)
     return (
       <StatusPanel title="Cargando grupo">
@@ -196,23 +205,74 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
               <h2>Personas</h2>
               {group.data.members?.length ? (
                 <ul>
-                  {group.data.members.map((member) => (
-                    <li key={member.id}>
-                      <span className="avatar" aria-hidden="true">
-                        {(member.user?.displayName || '?').slice(0, 1).toUpperCase()}
-                      </span>
-                      <span>
-                        <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
-                        <small>{roleLabels[member.role]}</small>
-                      </span>
-                    </li>
-                  ))}
+                  {group.data.members.map((member) => {
+                    const badges =
+                      achievementMembers.data?.find((row) => row.user.id === member.user?.id)
+                        ?.badges ?? [];
+                    return (
+                      <li key={member.id}>
+                        <span className="avatar" aria-hidden="true">
+                          {(member.user?.displayName || '?').slice(0, 1).toUpperCase()}
+                        </span>
+                        <span>
+                          <strong>{member.user?.displayName || 'Miembro sin perfil'}</strong>
+                          <small>{roleLabels[member.role]}</small>
+                          {badges.length > 0 && (
+                            <span
+                              className="chip-list"
+                              aria-label={`Insignias de ${member.user?.displayName}`}
+                            >
+                              {badges.map((badge) => (
+                                <span className="status-chip success" key={badge.code}>
+                                  {badge.name} ·{' '}
+                                  {badge.level === 'GOLD'
+                                    ? 'Oro'
+                                    : badge.level === 'SILVER'
+                                      ? 'Plata'
+                                      : 'Bronce'}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="muted">La API no devolvió integrantes para este grupo.</p>
               )}
             </article>
           </div>
+          {achievementMembers.isError && <ErrorMessage error={achievementMembers.error} />}
+          {achievementRanking.isPending && <p className="muted" aria-busy="true">Calculando ranking…</p>}
+          {achievementRanking.isError && <ErrorMessage error={achievementRanking.error} />}
+          {achievementRanking.data && achievementRanking.data.length > 0 && (
+            <section className="members-card glass-panel" aria-labelledby="group-ranking-title">
+              <h2 id="group-ranking-title">Ranking del grupo</h2>
+              <p className="muted small">
+                Puntos por insignias; solo aparecen quienes decidieron participar.
+              </p>
+              <ol className="notification-list">
+                {achievementRanking.data.map((row) => (
+                  <li key={row.user.id}>
+                    <span className="avatar" aria-hidden="true">
+                      {row.rank}
+                    </span>
+                    <span className="grow">
+                      <strong>{row.user.displayName}</strong>
+                      <small>
+                        {row.points} puntos · {row.badges.length} insignias
+                      </small>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          {achievementRanking.data?.length === 0 && (
+            <p className="muted">Aún no hay insignias visibles en el ranking.</p>
+          )}
           {['OWNER', 'ADMIN'].includes(group.data.currentRole ?? '') && (
             <div className="admin-grid">
               <GroupInvitationForm groupId={groupId} />
