@@ -59,9 +59,13 @@ function readCache(userId: string): Promise<PersistedCache | undefined> {
   );
 }
 
-async function writeCache(value: PersistedCache): Promise<void> {
+async function writeCache(
+  value: PersistedCache,
+  isActive: () => boolean = () => true,
+): Promise<void> {
+  if (!isActive()) return;
   const database = await openDatabase();
-  if (!database) return;
+  if (!database || !isActive()) return;
   await new Promise<void>((resolve) => {
     const request = database
       .transaction(STORE_NAME, 'readwrite')
@@ -70,7 +74,7 @@ async function writeCache(value: PersistedCache): Promise<void> {
     request.onsuccess = () => resolve();
     request.onerror = () => resolve();
   });
-  setStatus({ hydrated: true, lastUpdatedAt: value.savedAt });
+  if (isActive()) setStatus({ hydrated: true, lastUpdatedAt: value.savedAt });
 }
 
 export async function clearOfflineQueryCache(userId?: string): Promise<void> {
@@ -92,6 +96,19 @@ export function isOfflinePersistableQueryKey(queryKey: readonly unknown[]): bool
   return typeof root === 'string' && allowedRoots.has(root);
 }
 
+/** Hidrata solo si la sesiÃ³n que iniciÃ³ la lectura sigue siendo la vigente. */
+export function hydrateOfflineCacheIfCurrent(
+  queryClient: QueryClient,
+  stored: PersistedCache,
+  isActive: () => boolean,
+  now = Date.now(),
+): boolean {
+  if (!isActive() || stored.version !== VERSION || now - stored.savedAt > MAX_AGE_MS) return false;
+  hydrate(queryClient, stored.cache);
+  setStatus({ hydrated: true, lastUpdatedAt: stored.savedAt });
+  return true;
+}
+
 /**
  * Persiste únicamente respuestas de lectura de una allowlist sin documentos, privacidad,
  * sesión ni tokens. El límite de 2 MiB y la caducidad de 7 días son la defensa adicional;
@@ -100,19 +117,21 @@ export function isOfflinePersistableQueryKey(queryKey: readonly unknown[]): bool
 export async function startOfflineQueryPersistence(
   queryClient: QueryClient,
   userId: string,
+  isActive: () => boolean = () => true,
 ): Promise<() => void> {
   if (!canUseIndexedDb()) return () => undefined;
   const stored = await readCache(userId);
-  if (stored && stored.version === VERSION && Date.now() - stored.savedAt <= MAX_AGE_MS) {
-    hydrate(queryClient, stored.cache);
-    setStatus({ hydrated: true, lastUpdatedAt: stored.savedAt });
-  } else if (stored) {
+  if (stored && !hydrateOfflineCacheIfCurrent(queryClient, stored, isActive)) {
+    if (!isActive()) return () => undefined;
     await clearOfflineQueryCache(userId);
   }
+  if (!isActive()) return () => undefined;
   let timer: number | undefined;
   const save = () => {
+    if (!isActive()) return;
     if (timer !== undefined) window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      if (!isActive()) return;
       const cache = dehydrate(queryClient, {
         shouldDehydrateQuery: (query) =>
           isOfflinePersistableQueryKey(query.queryKey) && query.state.status === 'success',
@@ -124,7 +143,7 @@ export async function startOfflineQueryPersistence(
         return;
       }
       if (serialized.length > MAX_BYTES) return;
-      void writeCache({ version: VERSION, userId, savedAt: Date.now(), cache });
+      void writeCache({ version: VERSION, userId, savedAt: Date.now(), cache }, isActive);
     }, 250);
   };
   const unsubscribe = queryClient.getQueryCache().subscribe(save);

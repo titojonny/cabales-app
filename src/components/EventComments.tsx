@@ -88,6 +88,7 @@ export function EventComments({
               {editing === comment.id ? (
                 <div>
                   <textarea
+                    aria-label="Editar comentario"
                     rows={3}
                     maxLength={2000}
                     value={editBody}

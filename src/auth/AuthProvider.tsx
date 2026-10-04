@@ -38,7 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persistedUserId.current = userId;
     if (!userId) return;
     let active = true;
-    void startOfflineQueryPersistence(queryClient, userId).then((cleanup) => {
+    void startOfflineQueryPersistence(
+      queryClient,
+      userId,
+      () => active && persistedUserId.current === userId,
+    ).then((cleanup) => {
       if (active) persistenceCleanup.current = cleanup;
       else cleanup();
     });
@@ -51,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       onUnauthorized(() => {
+        persistenceCleanup.current?.();
+        persistenceCleanup.current = undefined;
         queryClient.setQueryData(queryKeys.session, undefined);
         queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'session' });
         void clearOfflineQueryCache(sessionQuery.data?.user.id);
@@ -61,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: cabalesApi.logout,
     onSettled: () => {
+      persistenceCleanup.current?.();
+      persistenceCleanup.current = undefined;
       clearCsrfToken();
       void clearOfflineQueryCache(sessionQuery.data?.user.id);
       queryClient.clear();
@@ -76,7 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isUnauthorized:
           sessionQuery.error instanceof HttpError && sessionQuery.error.status === 401,
         retry: () => void sessionQuery.refetch(),
-        logout: () => logoutMutation.mutate(),
+        logout: () => {
+          persistenceCleanup.current?.();
+          persistenceCleanup.current = undefined;
+          void clearOfflineQueryCache(sessionQuery.data?.user.id);
+          logoutMutation.mutate();
+        },
         isLoggingOut: logoutMutation.isPending,
       }}
     >
