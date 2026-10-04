@@ -124,6 +124,10 @@ const fundBase = z.object({
   balanceCents: int,
   myRole: fundRole.nullable(),
   canManage: z.boolean(),
+  contributionPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('ANY_MEMBER'),
+  withdrawalPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('MANAGERS'),
+  closingPolicy: z.enum(['ANY_MEMBER', 'MANAGERS', 'GROUP_ADMINS']).default('MANAGERS'),
+  withdrawalLimitCents: int.nullish().default(null),
 });
 
 /** Fondo común con saldo derivado de movimientos. */
@@ -135,6 +139,8 @@ export const fundListSchema = z.array(fundSchema);
 const movementType = z.enum(['CONTRIBUTION', 'WITHDRAWAL', 'ADJUSTMENT']);
 export const fundDetailSchema = fundBase.extend({
   canContribute: z.boolean(),
+  canWithdraw: z.boolean(),
+  canClose: z.boolean(),
   totals: z.record(z.string(), z.object({ totalCents: int, count: int })),
   members: z.array(
     z.object({
@@ -485,6 +491,7 @@ export const NOTIFICATION_TYPES = [
   'document.expired',
   'achievement.unlocked',
   'event.reminder',
+  'event.comment',
 ] as const;
 export const notificationSchema = z.object({
   id,

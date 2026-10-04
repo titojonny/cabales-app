@@ -79,6 +79,7 @@ export function CreateExpensePage() {
   const { session } = useAuth();
   const [searchParams] = useSearchParams();
   const ocrJobId = searchParams.get('ocrJobId') ?? '';
+  const repeatFrom = searchParams.get('repeatFrom') ?? '';
   const queryClient = useQueryClient();
   const group = useQuery({
     ...queries.group(groupId, session?.user.id ?? ''),
@@ -92,6 +93,12 @@ export function CreateExpensePage() {
     queryFn: () => modulesApi.ocrJob(ocrJobId),
     enabled: Boolean(ocrJobId),
   });
+  const repeatTemplate = useQuery({
+    queryKey: ['repeat-expense-template', groupId, repeatFrom],
+    queryFn: () => cabalesApi.repeatExpenseTemplate(groupId, repeatFrom),
+    enabled: Boolean(repeatFrom),
+    retry: false,
+  });
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -99,6 +106,7 @@ export function CreateExpensePage() {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [submitError, setSubmitError] = useState<string>();
   const prefilled = useRef(false);
+  const repeatPrefilled = useRef(false);
   const form = useForm<ExpenseValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -168,6 +176,30 @@ export function CreateExpensePage() {
       })),
     );
   }, [form, proposal]);
+  useEffect(() => {
+    if (!repeatTemplate.data || repeatPrefilled.current || proposal) return;
+    repeatPrefilled.current = true;
+    const template = repeatTemplate.data as unknown as CreateExpenseInput;
+    form.setValue('title', template.title);
+    form.setValue('notes', template.notes ?? '');
+    form.setValue('amount', moneyText(template.totalCents));
+    form.setValue('subtotal', moneyText(template.subtotalCents ?? template.totalCents));
+    form.setValue('taxMode', 'AMOUNT');
+    form.setValue('taxValue', moneyText(template.taxCents));
+    form.setValue('tipMode', 'AMOUNT');
+    form.setValue('tipValue', moneyText(template.tipCents));
+    form.setValue('currency', template.currency);
+    form.setValue('occurredAt', localDateTime(template.occurredAt));
+    form.setValue('splitMode', template.splitMode);
+    form.setValue('categoryId', template.categoryId ?? '');
+    setSelectedTags(template.tagIds ?? []);
+    setSelected(template.participants.map((participant) => participant.eventParticipantId));
+    const payer = template.payers[0]?.eventParticipantId;
+    if (payer) form.setValue('payerId', payer);
+    setExactAmounts(Object.fromEntries(template.participants.map((participant) => [participant.eventParticipantId, moneyText(participant.shareCents)])));
+    setPercentageValues(Object.fromEntries(template.participants.filter((participant) => participant.percentageBps !== undefined).map((participant) => [participant.eventParticipantId, ((participant.percentageBps ?? 0) / 100).toFixed(2)])));
+    setItems((template.items ?? []).map((item) => ({ id: crypto.randomUUID(), name: item.name, quantity: item.quantity, amount: moneyText(item.amountCents), splitMode: 'EXACT', assignedIds: item.allocations.map((allocation) => allocation.eventParticipantId), customAmounts: Object.fromEntries(item.allocations.map((allocation) => [allocation.eventParticipantId, moneyText(allocation.amountCents)])) })));
+  }, [form, proposal, repeatTemplate.data]);
 
   const participants = event.data?.participants ?? [];
   const explicitSubtotalCents = parseMoneyToCents(subtotalInput);
@@ -967,6 +999,14 @@ export function ExpenseDetailPage() {
             : 'Montos exactos'
       }
       title={expense.data.title}
+      action={
+        <Link
+          className="button primary"
+          to={`/app/groups/${groupId}/events/${expense.data.eventId}/expenses/new?repeatFrom=${expenseId}`}
+        >
+          Repetir reparto
+        </Link>
+      }
     >
       <section className="expense-detail glass-panel">
         <div className="expense-total">

@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@heroui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { cabalesApi } from '../api/cabales-api';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
@@ -14,6 +14,12 @@ import { CategoryManager } from './BudgetPages';
 import { GroupInvitationForm, InvitationList } from './InvitationPage';
 
 const roleLabels = { OWNER: 'Propietario', ADMIN: 'Administrador', MEMBER: 'Miembro' } as const;
+
+function localDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
 
 /** Lista grupos reales y representa por separado carga, error y ausencia de datos. */
 export function DashboardPage() {
@@ -285,12 +291,16 @@ export function GroupDetailPage({ tab }: { tab: 'summary' | 'events' }) {
 /** Crea un evento asociado al identificador validado por la ruta y refresca su lista. */
 export function CreateEventPage() {
   const { groupId = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const repeatFrom = searchParams.get('repeatFrom') ?? '';
   const { session } = useAuth();
   const group = useQuery(queries.group(groupId, session?.user.id ?? ''));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [guestDraft, setGuestDraft] = useState('');
   const [linkDraft, setLinkDraft] = useState({ label: '', url: '' });
+  const repeatTemplate = useQuery({ queryKey: ['repeat-event-template', groupId, repeatFrom], queryFn: () => cabalesApi.repeatEventTemplate(groupId, repeatFrom), enabled: Boolean(repeatFrom), retry: false });
+  const repeatPrefilled = useRef(false);
   const form = useForm<EventValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
@@ -310,6 +320,12 @@ export function CreateEventPage() {
   const memberIds = form.watch('memberIds');
   const guests = form.watch('guests');
   const links = form.watch('links');
+  useEffect(() => {
+    if (!repeatTemplate.data || repeatPrefilled.current) return;
+    repeatPrefilled.current = true;
+    const template = repeatTemplate.data as { name: string; description?: string; startsAt: string; endsAt?: string; locationName?: string; locationAddress?: string; mapsUrl?: string; timeZone?: string; memberIds: string[]; guests: string[]; links: Array<{ label: string; url: string }> };
+    form.reset({ name: template.name, description: template.description ?? '', startsAt: localDateTime(template.startsAt), endsAt: template.endsAt ? localDateTime(template.endsAt) : '', locationName: template.locationName ?? '', locationAddress: template.locationAddress ?? '', mapsUrl: template.mapsUrl ?? '', timeZone: template.timeZone ?? '', memberIds: template.memberIds, guests: template.guests, links: template.links });
+  }, [form, repeatTemplate.data]);
   const mutation = useMutation({
     mutationFn: (values: EventValues) =>
       cabalesApi.createEvent(groupId, {

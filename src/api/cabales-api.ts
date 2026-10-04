@@ -38,6 +38,15 @@ import {
   googleLinkStartSchema,
   settlementDetailSchema,
   settlementListSchema,
+  calendarEventListSchema,
+  eventCommentListSchema,
+  eventCommentSchema,
+  eventFundsSchema,
+  publicShareLinkListSchema,
+  publicShareLinkSchema,
+  publicSummarySchema,
+  repeatEventTemplateSchema,
+  repeatExpenseTemplateSchema,
 } from './schemas';
 
 function withCurrentMembership(group: Group, userId: string): Group {
@@ -137,6 +146,32 @@ export const cabalesApi = {
       `/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/reminders`,
       { method: 'PUT', body: { reminders }, schema: eventDetailSchema },
     ),
+  repeatEventTemplate: (groupId: string, eventId: string) =>
+    request<Record<string, unknown>>(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/repeat-template`, {
+      schema: repeatEventTemplateSchema,
+    }),
+  eventComments: (groupId: string, eventId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments`, {
+      schema: eventCommentListSchema,
+    }),
+  createEventComment: (groupId: string, eventId: string, body: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments`, {
+      method: 'POST',
+      body: { body },
+      schema: eventCommentSchema,
+    }),
+  updateEventComment: (groupId: string, eventId: string, commentId: string, body: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments/${encodeURIComponent(commentId)}`, {
+      method: 'PATCH',
+      body: { body },
+      schema: eventCommentSchema,
+    }),
+  deleteEventComment: (groupId: string, eventId: string, commentId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' }),
+  eventFunds: (groupId: string, eventId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/funds`, { schema: eventFundsSchema }),
+  replaceEventFunds: (groupId: string, eventId: string, fundIds: string[]) =>
+    request(`/groups/${encodeURIComponent(groupId)}/events/${encodeURIComponent(eventId)}/funds`, { method: 'PUT', body: { fundIds }, schema: eventFundsSchema }),
   createExpense: (groupId: string, input: CreateExpenseInput, idempotencyKey: string) =>
     request<Expense>(`/groups/${encodeURIComponent(groupId)}/expenses`, {
       method: 'POST',
@@ -153,6 +188,8 @@ export const cabalesApi = {
       `/groups/${encodeURIComponent(groupId)}/expenses/${encodeURIComponent(expenseId)}`,
       { schema: expenseDetailSchema },
     ),
+  repeatExpenseTemplate: (groupId: string, expenseId: string) =>
+    request<Record<string, unknown>>(`/groups/${encodeURIComponent(groupId)}/expenses/${encodeURIComponent(expenseId)}/repeat-template`, { schema: repeatExpenseTemplateSchema }),
   settlements: (groupId: string) =>
     request<SettlementSummary[]>(`/groups/${encodeURIComponent(groupId)}/settlements`, {
       schema: settlementListSchema,
@@ -174,4 +211,12 @@ export const cabalesApi = {
       `/groups/${encodeURIComponent(groupId)}/settlements/${encodeURIComponent(settlementId)}/transfers/${encodeURIComponent(transferId)}/paid`,
       { method: 'PATCH', schema: paidTransferSchema },
     ),
+  createPublicShareLink: (groupId: string, input: { eventId?: string; settlementId?: string; expiresInDays: number }) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links`, { method: 'POST', body: input, schema: publicShareLinkSchema }),
+  publicShareLinks: (groupId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links`, { schema: publicShareLinkListSchema }),
+  revokePublicShareLink: (groupId: string, linkId: string) =>
+    request(`/groups/${encodeURIComponent(groupId)}/share-links/${encodeURIComponent(linkId)}/revoke`, { method: 'POST' }),
+  publicSummary: (token: string) => request(`/share/summaries/${encodeURIComponent(token)}`, { schema: publicSummarySchema }),
+  calendarEvents: (from: string, to: string) => request('/calendar/events' + toQuery({ from, to }), { schema: calendarEventListSchema }),
 };

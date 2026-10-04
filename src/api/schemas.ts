@@ -3,6 +3,7 @@ import { z } from 'zod';
 const id = z.string().uuid();
 const date = z.string().datetime();
 const currency = z.string().regex(/^[A-Z]{3}$/);
+const int = z.number().int();
 const cents = z.number().int().positive().max(2_147_483_647);
 const role = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
 const eventStatus = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
@@ -274,6 +275,7 @@ export const eventDetailSchema = z
     }),
     settlement: rawSettlementReference.extend({ createdAt: date }).strict().nullable(),
     _count: z.strictObject({ expenses: z.number().int().nonnegative() }),
+    funds: z.array(z.strictObject({ fundId: id, name: z.string(), currency, balanceCents: int, contributionsCents: int, movementCount: int })).optional(),
   })
   .transform((event) => ({
     id: event.id,
@@ -302,6 +304,7 @@ export const eventDetailSchema = z
     reminders: event.reminders,
     rsvpCounts: event.rsvpCounts,
     settlement: event.settlement ?? undefined,
+    ...(event.funds === undefined ? {} : { funds: event.funds }),
   }));
 
 const rawExpenseParticipant = z.strictObject({
@@ -556,3 +559,65 @@ export const paidTransferSchema = z.strictObject({
   amountCents: cents,
   paidAt: date,
 });
+
+export const eventCommentSchema = z.strictObject({
+  id,
+  body: z.string().min(1).max(2000),
+  authorUserId: id,
+  author: z.strictObject({
+    id,
+    displayName: z.string(),
+    avatarUrl: z.string().url().nullable(),
+  }),
+  createdAt: date,
+  updatedAt: date,
+});
+export const eventCommentListSchema = z.array(eventCommentSchema);
+export const eventFundsSchema = z.array(
+  z.strictObject({
+    fundId: id,
+    name: z.string(),
+    currency,
+    balanceCents: int,
+    contributionsCents: int,
+    movementCount: int,
+  }),
+);
+export const publicSummarySchema = z.strictObject({
+  type: z.enum(['EVENT', 'SETTLEMENT']),
+  expiresAt: date,
+  groupName: z.string(),
+  eventName: z.string(),
+  status: z.enum(['OPEN', 'CLOSED', 'CANCELLED', 'COMPLETED']),
+  currency,
+  totalCents: int,
+  participants: z.array(z.strictObject({ displayName: z.string() })),
+  transfers: z.array(
+    z.strictObject({ debtor: z.string(), creditor: z.string(), amountCents: int, status: z.string() }),
+  ),
+});
+export const publicShareLinkSchema = z.strictObject({
+  id,
+  eventId: id.nullable(),
+  settlementId: id.nullable(),
+  expiresAt: date,
+  revokedAt: date.nullable().optional(),
+  createdAt: date,
+  url: z.string().url().optional(),
+});
+export const publicShareLinkListSchema = z.array(publicShareLinkSchema);
+export const calendarEventListSchema = z.array(
+  z.strictObject({
+    id,
+    groupId: id,
+    name: z.string(),
+    description: z.string().nullable(),
+    startsAt: date,
+    endsAt: date.nullable(),
+    status: z.enum(['OPEN', 'CLOSED', 'CANCELLED']),
+    locationName: z.string().nullable(),
+    group: z.strictObject({ name: z.string(), currency }),
+  }),
+);
+export const repeatEventTemplateSchema = z.record(z.string(), z.unknown());
+export const repeatExpenseTemplateSchema = z.record(z.string(), z.unknown());
