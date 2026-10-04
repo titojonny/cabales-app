@@ -90,6 +90,35 @@ function ProfileSection() {
   );
 }
 
+function ProfileBadgesSection() {
+  const achievements = useQuery(moduleQueries.achievements());
+  const badges = achievements.data?.filter((achievement) => achievement.currentLevel) ?? [];
+  return (
+    <section className="form-card glass-panel" aria-labelledby="profile-badges-title">
+      <h2 id="profile-badges-title">Tus insignias</h2>
+      {achievements.isPending && <p aria-busy="true">Cargando insignias…</p>}
+      {achievements.isError && <ErrorMessage error={achievements.error} />}
+      {!achievements.isPending && !achievements.isError && badges.length === 0 && (
+        <p className="muted">Aun no tienes insignias obtenidas.</p>
+      )}
+      {badges.length > 0 && (
+        <div className="chip-list">
+          {badges.map((badge) => (
+            <span className="status-chip success" key={badge.code}>
+              {badge.name} ·{' '}
+              {badge.currentLevel === 'GOLD'
+                ? 'Oro'
+                : badge.currentLevel === 'SILVER'
+                  ? 'Plata'
+                  : 'Bronce'}
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function GoogleAccountSection() {
   const queryClient = useQueryClient();
   const config = useQuery(queries.authConfig());
@@ -522,6 +551,7 @@ export function AccountPage() {
       </nav>
       <div className="account-grid">
         <ProfileSection />
+        <ProfileBadgesSection />
         <GoogleAccountSection />
         <DocumentLockSection />
         <PrivacySection />

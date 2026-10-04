@@ -11,6 +11,8 @@ export const moduleKeys = {
   fund: (groupId: string, fundId: string) => ['groups', groupId, 'funds', fundId] as const,
   fundMovements: (groupId: string, fundId: string) =>
     ['groups', groupId, 'funds', fundId, 'movements'] as const,
+  fundContributionRequests: (groupId: string, fundId: string) =>
+    ['groups', groupId, 'funds', fundId, 'contribution-requests'] as const,
   documents: (filters: Record<string, string | number | boolean | undefined>) => ['documents', filters] as const,
   documentsRoot: ['documents'] as const,
   documentGrants: (documentId: string) => ['documents', 'grants', documentId] as const,
@@ -28,6 +30,9 @@ export const moduleKeys = {
   notificationPreferences: ['notifications', 'preferences'] as const,
   pushConfig: ['notifications', 'push-config'] as const,
   achievements: ['achievements'] as const,
+  achievementPrivacy: ['achievements', 'privacy'] as const,
+  achievementRanking: (groupId: string) => ['groups', groupId, 'achievements', 'ranking'] as const,
+  achievementMembers: (groupId: string) => ['groups', groupId, 'achievements', 'members'] as const,
   privacyRequests: ['privacy'] as const,
   personalExpenses: (filters: Record<string, string | number | undefined>) => ['expenses', filters] as const,
   personalTags: ['tags', 'personal'] as const,
@@ -59,6 +64,11 @@ export const moduleQueries = {
       queryKey: moduleKeys.fund(groupId, fundId),
       queryFn: () => modulesApi.fund(groupId, fundId),
     }),
+  fundContributionRequests: (groupId: string, fundId: string) =>
+    queryOptions({
+      queryKey: moduleKeys.fundContributionRequests(groupId, fundId),
+      queryFn: () => modulesApi.fundContributionRequests(groupId, fundId),
+    }),
   cabudas: () =>
     queryOptions({ queryKey: moduleKeys.cabudas, queryFn: () => modulesApi.cabudasSummary() }),
   unreadCount: () =>
@@ -78,6 +88,18 @@ export const moduleQueries = {
     queryOptions({ queryKey: moduleKeys.pushConfig, queryFn: modulesApi.pushConfig }),
   achievements: () =>
     queryOptions({ queryKey: moduleKeys.achievements, queryFn: modulesApi.achievements }),
+  achievementPrivacy: () =>
+    queryOptions({ queryKey: moduleKeys.achievementPrivacy, queryFn: modulesApi.achievementPrivacy }),
+  achievementRanking: (groupId: string) =>
+    queryOptions({
+      queryKey: moduleKeys.achievementRanking(groupId),
+      queryFn: () => modulesApi.achievementRanking(groupId),
+    }),
+  achievementMembers: (groupId: string) =>
+    queryOptions({
+      queryKey: moduleKeys.achievementMembers(groupId),
+      queryFn: () => modulesApi.achievementMembers(groupId),
+    }),
   incomes: (filters: { from?: string; to?: string; currency?: string } = {}) =>
     queryOptions({
       queryKey: moduleKeys.incomes(filters),

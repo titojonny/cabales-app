@@ -201,6 +201,14 @@ Estadísticas muestra comparación con el periodo equivalente anterior, proyecci
 
 La persistencia offline usa el caché de TanStack Query serializado en IndexedDB por usuario. Solo se guardan consultas allowlisted de grupos, gastos/estadísticas, Cabudas, ingresos y logros; la sesión, tokens, documentos, OCR, privacidad y mutaciones no se persisten. El límite es 2 MiB y la caducidad 7 días. La caché se elimina al cerrar sesión o cambiar de usuario. Las mutaciones detectan `navigator.onLine === false`, muestran un mensaje claro y nunca encolan pagos. El service worker conserva `NetworkOnly` para `/api/v1`.
 
+## P6: aportes, logros y ranking
+
+El detalle de un fondo permite a un gestor crear solicitudes con importe independiente por integrante y fecha limite. Cada fila muestra Pendiente, Pagado o Vencido; registrar un aporte con la solicitud seleccionada conserva la idempotencia del movimiento y actualiza su estado.
+
+`/app/achievements` muestra progreso real, umbrales Bronce/Plata/Oro y puntos. El resumen de cada grupo muestra insignias de sus miembros y un ranking amistoso; la privacidad se puede desactivar desde la pagina de logros. Los nuevos tipos de aviso (`fund.contribution_due` y `fund.contribution_overdue`) aparecen junto a eventos, documentos y push en Preferencias.
+
+No se crean filas demo en el cliente: si la API no devuelve solicitudes, logros o ranking, se presentan estados vacios y no se rellenan datos ficticios.
+
 ## P4: Mis gastos
 
 Las pruebas E2E de P4 bloquean el service worker y mockean las respuestas validas de la sesion; asi el shell se verifica sin depender de un API local en el puerto 3000.
