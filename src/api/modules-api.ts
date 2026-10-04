@@ -218,6 +218,8 @@ export const modulesApi = {
       method: 'POST',
       schema: fundSchema,
     }),
+  updateFund: (groupId: string, fundId: string, input: { name?: string; description?: string | null; contributionPolicy?: 'ANY_MEMBER' | 'MANAGERS' | 'GROUP_ADMINS'; withdrawalPolicy?: 'ANY_MEMBER' | 'MANAGERS' | 'GROUP_ADMINS'; closingPolicy?: 'ANY_MEMBER' | 'MANAGERS' | 'GROUP_ADMINS'; withdrawalLimitCents?: number | null }) =>
+    request(`/groups/${enc(groupId)}/funds/${enc(fundId)}`, { method: 'PATCH', body: input, schema: fundSchema }),
   fundMovements: (groupId: string, fundId: string, cursor?: string) =>
     requestWithMeta(
       `/groups/${enc(groupId)}/funds/${enc(fundId)}/movements${toQuery({ cursor })}`,

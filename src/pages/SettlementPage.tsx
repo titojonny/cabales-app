@@ -6,6 +6,7 @@ import { cabalesApi } from '../api/cabales-api';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
 import { GroupTabs } from '../components/GroupTabs';
+import { PublicShareActions } from '../components/PublicShareActions';
 import { ErrorMessage, Icon, StatusPanel } from '../components/ui';
 import { formatMoney } from '../domain/money';
 import { fallbackParticipantLabel, participantLabelMap } from '../domain/participants';
@@ -180,6 +181,7 @@ export function SettlementDetailPage() {
       title={event.data?.name || `Liquidación ${settlement.data.id.slice(0, 8)}`}
     >
       <GroupTabs groupId={groupId} />
+      <PublicShareActions groupId={groupId} target={{ settlementId }} canManage={privileged} />
       {markPaid.isError && <ErrorMessage error={markPaid.error} />}
       {markPaid.isSuccess && (
         <p className="success-message" role="status">

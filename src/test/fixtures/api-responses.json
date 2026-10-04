@@ -608,6 +608,8 @@
     "myRole": "MANAGER",
     "canManage": true,
     "canContribute": true,
+    "canWithdraw": true,
+    "canClose": true,
     "totals": {
       "CONTRIBUTION": {
         "totalCents": 500,

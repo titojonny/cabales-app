@@ -68,6 +68,12 @@ const DocsPage = lazy(() =>
 const SharedDocumentPage = lazy(() =>
   import('./pages/DocsPage').then(({ SharedDocumentPage }) => ({ default: SharedDocumentPage })),
 );
+const SharedSummaryPage = lazy(() =>
+  import('./pages/SharedSummaryPage').then(({ SharedSummaryPage }) => ({ default: SharedSummaryPage })),
+);
+const CalendarPage = lazy(() =>
+  import('./pages/CalendarPage').then(({ CalendarPage }) => ({ default: CalendarPage })),
+);
 const FundDetailPage = lazy(() =>
   import('./pages/FundPages').then(({ FundDetailPage }) => ({ default: FundDetailPage })),
 );
@@ -125,11 +131,13 @@ export function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/share/documents/:token" element={<SharedDocumentPage />} />
+        <Route path="/share/summaries/:token" element={<SharedSummaryPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppShell />}>
             <Route index element={<DashboardPage />} />
             <Route path="expenses" element={<PersonalExpensesPage />} />
             <Route path="groups" element={<DashboardPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="groups/new" element={<CreateGroupPage />} />
             <Route path="groups/:groupId" element={<GroupDetailPage tab="summary" />} />
             <Route path="groups/:groupId/events" element={<GroupDetailPage tab="events" />} />

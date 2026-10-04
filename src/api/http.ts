@@ -80,7 +80,8 @@ export interface FileResponse {
 
 /** Operación de telemetría sin query string: evita registrar nombres de archivo o filtros. */
 function operationName(path: string): string {
-  return path.split('?')[0] ?? path;
+  const operation = path.split('?')[0] ?? path;
+  return operation.replace(/\/share\/(?:summaries|documents)\/[A-Za-z0-9_-]+$/, (value) => `${value.split('/').slice(0, -1).join('/')}/:token`);
 }
 
 function isEnvelope(value: unknown): value is ApiEnvelope<unknown> {

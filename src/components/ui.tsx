@@ -3,6 +3,7 @@ import { Button } from '@heroui/react';
 import {
   ArrowRightLeft,
   Bell,
+  CalendarDays,
   ChartColumn,
   Check,
   ChevronRight,
@@ -39,7 +40,8 @@ type IconName =
   | 'fund'
   | 'budget'
   | 'shield'
-  | 'user';
+  | 'user'
+  | 'calendar';
 
 const icons: Record<IconName, LucideIcon> = {
   home: House,
@@ -58,6 +60,7 @@ const icons: Record<IconName, LucideIcon> = {
   budget: Target,
   shield: ShieldCheck,
   user: UserRound,
+  calendar: CalendarDays,
 };
 
 /** Renderiza iconos Lucide consistentes; el texto contiguo conserva el nombre accesible. */

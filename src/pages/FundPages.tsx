@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { moduleKeys, moduleQueries } from '../api/module-queries';
-import type { FundMovementType } from '../api/module-schemas';
+import type { FundDetail, FundMovementType } from '../api/module-schemas';
 import { modulesApi } from '../api/modules-api';
 import { queries } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
@@ -239,7 +239,8 @@ export function FundDetailPage() {
   const data = fund.data;
   const allowedTypes: FundMovementType[] = [
     ...(data.canContribute ? (['CONTRIBUTION'] as const) : []),
-    ...(data.canManage ? (['WITHDRAWAL', 'ADJUSTMENT'] as const) : []),
+    ...(data.canWithdraw ? (['WITHDRAWAL'] as const) : []),
+    ...(data.canManage ? (['ADJUSTMENT'] as const) : []),
   ];
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -304,6 +305,10 @@ export function FundDetailPage() {
           </ul>
         </article>
       </div>
+
+      {data.canManage && !data.archivedAt && (
+        <FundRulesForm groupId={groupId} fundId={fundId} data={data} onSaved={refresh} />
+      )}
 
       {!data.archivedAt && allowedTypes.length > 0 && (
         <section className="form-card glass-panel">
@@ -432,7 +437,7 @@ export function FundDetailPage() {
         )}
       </section>
 
-      {data.canManage && !data.archivedAt && (
+      {data.canClose && !data.archivedAt && (
         <section className="danger-zone">
           <h2>Archivar fondo</h2>
           <p className="muted">Solo es posible con saldo cero. El historial se conserva.</p>
@@ -451,4 +456,13 @@ export function FundDetailPage() {
       )}
     </PageHeader>
   );
+}
+
+function FundRulesForm({ groupId, fundId, data, onSaved }: { groupId: string; fundId: string; data: FundDetail; onSaved: () => void }) {
+  const [contributionPolicy, setContributionPolicy] = useState(data.contributionPolicy);
+  const [withdrawalPolicy, setWithdrawalPolicy] = useState(data.withdrawalPolicy);
+  const [closingPolicy, setClosingPolicy] = useState(data.closingPolicy);
+  const [limit, setLimit] = useState(data.withdrawalLimitCents == null ? '' : String(data.withdrawalLimitCents / 100));
+  const update = useMutation({ mutationFn: () => modulesApi.updateFund(groupId, fundId, { contributionPolicy, withdrawalPolicy, closingPolicy, withdrawalLimitCents: limit.trim() ? Math.round(Number(limit) * 100) : null }), onSuccess: onSaved });
+  return <section className="form-card glass-panel" aria-labelledby="fund-rules-title"><h2 id="fund-rules-title">Reglas del fondo</h2><p className="muted">Se aplican en el servidor a cada aporte, retiro y cierre.</p><div className="field-pair"><div><label htmlFor="fund-contribution-policy">Quién puede aportar</label><select id="fund-contribution-policy" value={contributionPolicy} onChange={(event) => setContributionPolicy(event.target.value as typeof contributionPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div><div><label htmlFor="fund-withdrawal-policy">Quién puede retirar</label><select id="fund-withdrawal-policy" value={withdrawalPolicy} onChange={(event) => setWithdrawalPolicy(event.target.value as typeof withdrawalPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div></div><div className="field-pair"><div><label htmlFor="fund-closing-policy">Quién puede cerrar</label><select id="fund-closing-policy" value={closingPolicy} onChange={(event) => setClosingPolicy(event.target.value as typeof closingPolicy)}><option value="ANY_MEMBER">Cualquier miembro del fondo</option><option value="MANAGERS">Solo gestores</option><option value="GROUP_ADMINS">OWNER/ADMIN del grupo</option></select></div><div><label htmlFor="fund-withdrawal-limit">Límite de retiro ({data.currency})</label><input id="fund-withdrawal-limit" inputMode="decimal" placeholder="Sin límite" value={limit} onChange={(event) => setLimit(event.target.value)} /></div></div>{update.isError && <ErrorMessage error={update.error} />}<Button variant="primary" type="button" isDisabled={update.isPending} onPress={() => update.mutate()}>{update.isPending ? 'Guardando…' : 'Guardar reglas'}</Button></section>;
 }

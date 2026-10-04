@@ -7,6 +7,8 @@ import { moduleKeys, moduleQueries } from '../api/module-queries';
 import { modulesApi } from '../api/modules-api';
 import { queries, queryKeys } from '../api/queries';
 import { useAuth } from '../auth/AuthProvider';
+import { EventComments } from '../components/EventComments';
+import { PublicShareActions } from '../components/PublicShareActions';
 import { ErrorMessage, Icon, StatusPanel, formatDate } from '../components/ui';
 import { formatMoney } from '../domain/money';
 import { participantLabel } from '../domain/participants';
@@ -26,6 +28,8 @@ export function EventDetailPage() {
   const { groupId = '', eventId = '' } = useParams();
   const { session } = useAuth();
   const event = useQuery(queries.event(groupId, eventId));
+  const eventFunds = useQuery({ queryKey: ['event-funds', groupId, eventId], queryFn: () => cabalesApi.eventFunds(groupId, eventId) });
+  const availableFunds = useQuery({ ...moduleQueries.funds(groupId), enabled: Boolean(groupId) });
   const group = useQuery({
     ...queries.group(groupId, session?.user.id ?? ''),
     enabled: Boolean(session?.user.id),
@@ -102,6 +106,7 @@ export function EventDetailPage() {
     eventData.createdById === session?.user.id ||
     ['OWNER', 'ADMIN'].includes(group.data?.currentRole ?? ''),
   );
+  const canManageGroupResources = ['OWNER', 'ADMIN'].includes(group.data?.currentRole ?? '');
   const canAddExpense = eventData.status === 'OPEN' && !eventData.settlement;
   const eventExpenses = (expenses.data ?? []).filter((expense) => expense.eventId === eventId);
   return (
@@ -115,6 +120,9 @@ export function EventDetailPage() {
               Editar
             </Link>
           )}
+          <Link className="button quiet" to={`/app/groups/${groupId}/events/new?repeatFrom=${eventId}`}>
+            Repetir evento
+          </Link>
           {canAddExpense && (
             <Link
               className="button primary"
@@ -231,6 +239,22 @@ export function EventDetailPage() {
         </section>
       </div>
 
+      <EventComments
+        groupId={groupId}
+        eventId={eventId}
+        canModerate={['OWNER', 'ADMIN'].includes(group.data?.currentRole ?? '')}
+      />
+      <EventFundsPanel
+        groupId={groupId}
+        eventId={eventId}
+        canManage={canManageGroupResources}
+        linked={eventFunds.data ?? []}
+        available={availableFunds.data ?? []}
+        isLoading={eventFunds.isPending}
+        onSaved={() => void eventFunds.refetch()}
+      />
+      <PublicShareActions groupId={groupId} target={{ eventId }} canManage={canManageGroupResources} />
+
       {canManage && eventData.status !== 'CANCELLED' && (
         <section className="members-card glass-panel" aria-labelledby="reminders-title">
           <h2 id="reminders-title">Recordatorios</h2>
@@ -326,6 +350,13 @@ export function EventDetailPage() {
       </Link>
     </PageHeader>
   );
+}
+
+function EventFundsPanel({ groupId, eventId, canManage, linked, available, isLoading, onSaved }: { groupId: string; eventId: string; canManage: boolean; linked: Array<{ fundId: string; name: string; currency: string; balanceCents: number; contributionsCents: number; movementCount: number }>; available: Array<{ id: string; name: string; archivedAt: string | null }>; isLoading: boolean; onSaved: () => void }) {
+  const [selected, setSelected] = useState<string[]>(linked.map((fund) => fund.fundId));
+  useEffect(() => setSelected(linked.map((fund) => fund.fundId)), [linked]);
+  const update = useMutation({ mutationFn: () => cabalesApi.replaceEventFunds(groupId, eventId, selected), onSuccess: onSaved });
+  return <section className="members-card glass-panel" aria-labelledby="event-funds-title"><h2 id="event-funds-title">Fondos vinculados</h2>{isLoading ? <p className="muted">Cargando saldos…</p> : linked.length === 0 ? <p className="muted">Este evento todavía no tiene fondos asociados.</p> : <ul className="fund-event-list">{linked.map((fund) => <li key={fund.fundId}><span><strong>{fund.name}</strong><small>{fund.movementCount} movimientos · aportes {formatMoney(fund.contributionsCents, fund.currency)}</small></span><strong>{formatMoney(fund.balanceCents, fund.currency)}</strong></li>)}</ul>}{canManage && available.length > 0 && <><fieldset><legend>Asociar fondos del grupo</legend><div className="participant-list">{available.filter((fund) => !fund.archivedAt).map((fund) => <label className="participant" key={fund.id}><span>{fund.name}</span><input type="checkbox" checked={selected.includes(fund.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, fund.id] : current.filter((id) => id !== fund.id))} /></label>)}</div></fieldset><Button variant="primary" type="button" isDisabled={update.isPending} onPress={() => update.mutate()}>{update.isPending ? 'Guardando…' : 'Guardar fondos'}</Button>{update.isError && <ErrorMessage error={update.error} />}</>}</section>;
 }
 
 function EventActions({

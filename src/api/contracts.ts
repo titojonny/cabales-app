@@ -91,6 +91,59 @@ export interface Event {
   reminders?: Array<{ id: string; minutesBefore: number; enabled: boolean }>;
   rsvpCounts?: Record<'PENDING' | 'GOING' | 'MAYBE' | 'DECLINED', number>;
   settlement?: { id: string; status: 'OPEN' | 'COMPLETED' | 'CANCELLED'; createdAt?: string };
+  funds?: EventFundSummary[];
+}
+
+export interface EventFundSummary {
+  fundId: string;
+  name: string;
+  currency: string;
+  balanceCents: number;
+  contributionsCents: number;
+  movementCount: number;
+}
+
+export interface EventComment {
+  id: string;
+  body: string;
+  authorUserId: string;
+  author: { id: string; displayName: string; avatarUrl: string | null };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicSummary {
+  type: 'EVENT' | 'SETTLEMENT';
+  expiresAt: string;
+  groupName: string;
+  eventName: string;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED' | 'COMPLETED';
+  currency: string;
+  totalCents: number;
+  participants: Array<{ displayName: string }>;
+  transfers: Array<{ debtor: string; creditor: string; amountCents: number; status: string }>;
+}
+
+export interface PublicShareLink {
+  id: string;
+  eventId: string | null;
+  settlementId: string | null;
+  expiresAt: string;
+  revokedAt?: string | null;
+  createdAt: string;
+  url?: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  groupId: string;
+  name: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  locationName: string | null;
+  group: { name: string; currency: string };
 }
 
 /** Parte persistida de un gasto y su referencia al padrón del evento. */
@@ -270,6 +323,7 @@ export interface CreateEventInput {
   memberIds: string[];
   guests: string[];
   links: Array<{ label: string; url: string }>;
+  fundIds?: string[];
 }
 
 export interface UpdateEventInput {
@@ -282,6 +336,7 @@ export interface UpdateEventInput {
   mapsUrl?: string | null;
   timeZone?: string | null;
   links?: Array<{ label: string; url: string }>;
+  fundIds?: string[];
 }
 
 /** Carga real de gasto; la clave idempotente viaja fuera del body. */

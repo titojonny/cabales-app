@@ -156,6 +156,12 @@ La interfaz avisa cuando se pierde conexión, permite consultar lecturas previam
 
 La instalación exige producción HTTPS o `localhost`. El service worker se valida sobre `pnpm preview`, no durante el flujo normal de Vite en desarrollo.
 
+## P8: compartir y colaboración
+
+La PWA incluye `/share/summaries/:token` como página pública de solo lectura, enlaces generados y revocados desde eventos/liquidaciones, QR descargable para invitaciones, repetición de eventos y gastos con formularios editables, comentarios de evento, asociación de fondos con saldo/aportes y `/app/calendar` con vista mensual y agenda. Las respuestas se validan con Zod; React muestra comentarios como texto y escapa cualquier contenido.
+
+Se añadió `qrcode` como dependencia local de generación de PNG; no se usa ningún servicio externo. El token de invitación sigue viajando solo en `#token=` y nunca en la consulta HTTP. No hay variables de entorno nuevas.
+
 ## Accesibilidad y diseño
 
 La interfaz parte de 320 px, usa objetivos táctiles de al menos 44 px, navegación inferior móvil y riel lateral en escritorio. Incluye enlace de salto, landmarks, etiquetas, mensajes asociados, estados anunciables, foco visible y SVG decorativos ocultos al árbol accesible cuando hay texto equivalente.
